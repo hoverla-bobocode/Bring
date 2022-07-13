@@ -20,17 +20,17 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     @Override
     public <T> void register(String name, Class<T> beanType) {
-
+        System.out.println();
     }
 
     @Override
     public void register(Class<?>... beanTypes) {
-
+        System.out.println();
     }
 
     @Override
     public <T> String register(Class<T> beanType) {
-        return null;
+        return "null";
     }
 
     @Override
@@ -40,7 +40,7 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     @Override
     public Object getBean(String beanName) {
-        return null;
+        return "null";
     }
 
     @Override
@@ -55,6 +55,6 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     @Override
     public boolean containsBean(String name) {
-        return false;
+        return true;
     }
 }
