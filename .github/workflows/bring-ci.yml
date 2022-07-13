@@ -16,8 +16,15 @@ jobs:
           java-version: '17'
           distribution: 'corretto'
           cache: maven
+          # Disabling shallow clone is recommended for improving relevancy of reporting
+          fetch-depth: 0
       - name: Build
         run: mvn package -DskipTests=true
       - name: Test
         # Skips all steps except test
         run: mvn surefire:test
+      - name: Generate report for SonarCloud
+        run: mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=hoverla-bobocode_Bring
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
