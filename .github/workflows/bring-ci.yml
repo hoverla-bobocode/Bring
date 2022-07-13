@@ -20,3 +20,9 @@ jobs:
         run: mvn package -DskipTests=true
       - name: test
         run: mvn surefire:test # skips all steps except test
+      - name: sonar check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=hoverla-bobocode_Bring
+
