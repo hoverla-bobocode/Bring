@@ -20,10 +20,7 @@ jobs:
           fetch-depth: 0
       - name: Build
         run: mvn package -DskipTests=true
-      - name: Test
-        # Skips all steps except test
-        run: mvn surefire:test
-      - name: Generate report for SonarCloud
+      - name: Test and Generate Sonar Report
         run: mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=hoverla-bobocode_Bring
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
