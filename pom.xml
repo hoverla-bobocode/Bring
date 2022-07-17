@@ -9,15 +9,17 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>17</java.version>
+        <maven.compiler.plugin.version>3.10.1</maven.compiler.plugin.version>
         <maven.surefire.plugin.version>3.0.0-M7</maven.surefire.plugin.version>
         <maven.jacoco.plugin.version>0.8.7</maven.jacoco.plugin.version>
+        <sonar.organization>hoverla-bobocode</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <logback.version>1.2.11</logback.version>
         <lombok.version>1.18.24</lombok.version>
         <junit.version>5.8.2</junit.version>
-        <sonar.organization>hoverla-bobocode</sonar.organization>
-        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <mockito.version>4.6.1</mockito.version>
+        <assertj.version>3.23.1</assertj.version>
     </properties>
 
     <dependencies>
@@ -42,10 +44,34 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <compilerArgs>
+                        <!-- to preserve method parameter names after compilation -->
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
