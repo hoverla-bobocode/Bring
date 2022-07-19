@@ -19,6 +19,7 @@ import java.util.function.Predicate;
 
 import static java.lang.String.format;
 import static java.lang.reflect.Array.getLength;
+import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 
 /**
  * Validates classes annotated with {@link Bean @Bean} that were scanned by {@link BeanAnnotationScanner}.
@@ -107,9 +108,8 @@ public class BeanAnnotationClassValidator {
 
     private void validateConstructors(Class<?> beanClass, List<String> validationViolations) {
         Constructor<?>[] beanConstructors = beanClass.getConstructors();
-        int constructorAmount = getLength(beanConstructors);
-        log.trace("Overall number of constructors found - {}", constructorAmount);
-        if (constructorAmount == 0) {
+        log.trace("Overall number of constructors found - {}", beanConstructors.length);
+        if (isEmpty(beanConstructors)) {
             validationViolations.add("Class has no public constructors");
             return;
         }
