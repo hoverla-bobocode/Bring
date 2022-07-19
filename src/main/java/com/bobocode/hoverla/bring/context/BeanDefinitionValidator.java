@@ -51,6 +51,7 @@ import static org.apache.commons.lang3.StringUtils.containsAny;
  *     </ol>
  *     </li>
  */
+// TODO validate dependencies names
 @Slf4j
 public class BeanDefinitionValidator {
 

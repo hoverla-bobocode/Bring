@@ -7,10 +7,8 @@ import java.lang.reflect.Method;
 
 public class BeanDefinitionMapper {
 
-    // TODO: implement and test, remove suppression
-    @SuppressWarnings("java:S1172")
     public BeanDefinition mapToBeanDefinition(Class<?> scannedClass) {
-        return null;
+        return new ClassBasedBeanDefinition(scannedClass);
     }
 
     /**
