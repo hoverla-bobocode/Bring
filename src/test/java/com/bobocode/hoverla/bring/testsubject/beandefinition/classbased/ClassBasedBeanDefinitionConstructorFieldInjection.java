@@ -3,9 +3,11 @@ package com.bobocode.hoverla.bring.testsubject.beandefinition.classbased;
 import com.bobocode.hoverla.bring.annotation.Bean;
 import com.bobocode.hoverla.bring.annotation.Inject;
 import com.bobocode.hoverla.bring.annotation.Qualifier;
+import lombok.Getter;
 import lombok.Setter;
 
 @Bean
+@Getter
 @Setter
 public class ClassBasedBeanDefinitionConstructorFieldInjection {
 
