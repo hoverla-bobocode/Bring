@@ -55,21 +55,14 @@ public class ApplicationContextImplTest {
     }
 
     @Test
-    @DisplayName("Application context initializing")
-    public void applicationContextInitializingTest() throws NoSuchFieldException, IllegalAccessException {
+    @DisplayName("Scan, validate and initialized methods have been called")
+    public void applicationContextInitializingTest()  {
         verify(beanScannerOne).scan();
         verify(beanScannerTwo).scan();
 
         verify(validator).validate(anyList());
 
         verify(initializer).initialize(any());
-
-        Field contextField = applicationContext.getClass().getDeclaredField("context");
-        assertNotNull(contextField);
-        contextField.setAccessible(true);
-
-        Table context = (Table) contextField.getType().cast(contextField.get(applicationContext));
-        assertEquals(3, context.size());
     }
 
     @Test
