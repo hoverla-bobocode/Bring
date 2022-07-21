@@ -1,27 +1,27 @@
-# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
-
 name: Bring CI
 
-on: [push]
+on: [ push ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout source code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # disable shallow clone in order not to skip Git history
+
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'corretto'
           cache: maven
-          # Disabling shallow clone is recommended for improving relevancy of reporting
-          fetch-depth: 0
+
       - name: Build
         run: mvn package -DskipTests=true
+
       - name: Test and Generate Sonar Report
-        run: mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=hoverla-bobocode_Bring
+        run: mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
