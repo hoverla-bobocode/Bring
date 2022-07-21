@@ -77,6 +77,7 @@
                         <!-- to preserve method parameter names after compilation -->
                         <arg>-parameters</arg>
                     </compilerArgs>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
             <plugin>
