@@ -19,6 +19,7 @@ public class BringApplication {
      * Initializes and returns {@link ApplicationContext}
      */
     public static ApplicationContext loadContext() {
+        System.out.println("ex");
         return null;
     }
 
