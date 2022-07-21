@@ -81,13 +81,13 @@ public class ApplicationContextImplTest {
 
     @Test
     @DisplayName("Throwing an exception when a bean with provided type is not found")
-    public void getBeanByTypeThrowsException1() {
+    public void getBeanByTypeThrowsNoSuchBeanException() {
         assertThrows(NoSuchBeanException.class, () -> applicationContext.getBean(BigDecimal.class));
     }
 
     @Test
     @DisplayName("Throwing an exception when more than one bean are found")
-    public void getBeanByTypeThrowsException2() {
+    public void getBeanByTypeThrowsNoUniqueBeanException() {
         assertThrows(NoUniqueBeanException.class, () -> applicationContext.getBean(String.class));
     }
 
