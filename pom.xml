@@ -21,6 +21,7 @@
         <junit.version>5.8.2</junit.version>
         <mockito.version>4.6.1</mockito.version>
         <assertj.version>3.23.1</assertj.version>
+        <guava.version>31.1-jre</guava.version>
     </properties>
 
     <dependencies>
@@ -60,6 +61,7 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>${assertj.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
