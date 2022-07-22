@@ -2,16 +2,28 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.NoSuchBeanException;
 import com.bobocode.hoverla.bring.exception.NoUniqueBeanException;
-import com.google.common.collect.Table;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @TestInstance(value = TestInstance.Lifecycle.PER_CLASS)
 public class ApplicationContextImplTest {
@@ -23,7 +35,7 @@ public class ApplicationContextImplTest {
     private BeanInitializer initializer;
 
     @BeforeAll
-    private void init() {
+    void init() {
         beanScannerOne = Mockito.mock(BeanScanner.class);
         beanScannerTwo = Mockito.mock(BeanScanner.class);
         List<BeanScanner> beanScannerList = Arrays.asList(beanScannerOne, beanScannerTwo);
@@ -56,7 +68,7 @@ public class ApplicationContextImplTest {
 
     @Test
     @DisplayName("Scan, validate and initialized methods have been called")
-    public void applicationContextInitializingTest()  {
+    void applicationContextInitializingTest()  {
         verify(beanScannerOne).scan();
         verify(beanScannerTwo).scan();
 
@@ -67,40 +79,40 @@ public class ApplicationContextImplTest {
 
     @Test
     @DisplayName("Getting a bean from the context by bean type")
-    public void getBeanByType() {
+    void getBeanByType() {
         Integer bean = applicationContext.getBean(Integer.class);
         assertEquals(bean, 2);
     }
 
     @Test
     @DisplayName("Throwing an exception when a bean with provided type is not found")
-    public void getBeanByTypeThrowsNoSuchBeanException() {
+    void getBeanByTypeThrowsNoSuchBeanException() {
         assertThrows(NoSuchBeanException.class, () -> applicationContext.getBean(BigDecimal.class));
     }
 
     @Test
     @DisplayName("Throwing an exception when more than one bean are found")
-    public void getBeanByTypeThrowsNoUniqueBeanException() {
+    void getBeanByTypeThrowsNoUniqueBeanException() {
         assertThrows(NoUniqueBeanException.class, () -> applicationContext.getBean(String.class));
     }
 
     @Test
     @DisplayName("Getting a bean by provided name")
-    public void getBeanByName() {
+    void getBeanByName() {
         Object bean = applicationContext.getBean("String");
         assertInstanceOf(String.class, bean);
-        assertEquals("String bean", (String) bean);
+        assertEquals("String bean", bean);
     }
 
     @Test
     @DisplayName("Throwing an exception when bean with provided name is not found")
-    public void getBeanByNameThrowsException() {
+    void getBeanByNameThrowsException() {
         assertThrows(NoSuchBeanException.class, () -> applicationContext.getBean("Name"));
     }
 
     @Test
     @DisplayName("Getting a bean by provided name and type")
-    public void getBeanByNameAndType() {
+    void getBeanByNameAndType() {
         String bean = applicationContext.getBean("String", String.class);
         assertNotNull(bean);
         assertEquals("String bean", bean);
@@ -108,14 +120,14 @@ public class ApplicationContextImplTest {
 
     @Test
     @DisplayName("Throwing an exception when bean with provided name and type is not found")
-    public void getBeanByNameAndTypeThrowsException() {
+    void getBeanByNameAndTypeThrowsException() {
         assertThrows(NoSuchBeanException.class, () -> applicationContext.getBean("Name", String.class));
         assertThrows(NoSuchBeanException.class, () -> applicationContext.getBean("String", Integer.class));
     }
 
     @Test
     @DisplayName("Getting all beans with provided type")
-    public void getAllBeans() {
+    void getAllBeans() {
         Map<String, String> beans = applicationContext.getAllBeans(String.class);
         assertNotNull(beans);
         assertEquals(2, beans.size());
@@ -131,7 +143,7 @@ public class ApplicationContextImplTest {
 
     @Test
     @DisplayName("Getting empty map when context does not contain bean with provided type")
-    public void getEmptyMapOfBeansByProvidedType() {
+    void getEmptyMapOfBeansByProvidedType() {
         Map<String, BigDecimal> beans = applicationContext.getAllBeans(BigDecimal.class);
         assertNotNull(beans);
         assertTrue(beans.isEmpty());
@@ -139,7 +151,7 @@ public class ApplicationContextImplTest {
 
     @Test
     @DisplayName("Context contain bean with provided name")
-    public void containsBeans() {
+    void containsBeans() {
         assertTrue(applicationContext.containsBean("Integer"));
     }
 }

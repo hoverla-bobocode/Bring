@@ -6,11 +6,16 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.Objects;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.commons.lang3.StringUtils.SPACE;
+import static org.apache.commons.lang3.StringUtils.containsNone;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 
 /**
@@ -18,22 +23,21 @@ import java.util.Objects;
  */
 @Slf4j
 public class ApplicationContextImpl implements ApplicationContext {
+
     private Table<String, Class<?>, BeanDefinition> beanDefinitionTable;
-    private final String BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanType] must be not null";
-    private final String NO_SUCH_BEAN_EXCEPTION_MESSAGE = "Bean with provided name/type [%s] not found in the context";
 
     /**
-     *  Scanners scan application packages to define {@link BeanDefinition} configs.
-     *  Received list of bean definitions validates by validator to avoid duplicates and other problems (see {@link BeanValidator}).
-     *  Beans definitions list maps to container structure. It's Table<String, Class<?>, BeanDefinition>, where
-     *      - row key is a name of bean
-     *      - column key is a type of bean
-     *      - mapped value is bean definition
-     *  Then context passes to {@link BeanInitializer} for beans instances initialization
+     * Scanners scan application packages to define {@link BeanDefinition} configs.
+     * Received list of bean definitions validates by validator to avoid duplicates and other problems (see {@link BeanValidator}).
+     * Beans definitions list maps to container structure. It's Table<String, Class<?>, BeanDefinition>, where
+     * - row key is a name of bean
+     * - column key is a type of bean
+     * - mapped value is bean definition
+     * Then context passes to {@link BeanInitializer} for beans instances initialization
      *
-     * @param scanners      list of scanners for
-     * @param validator     bean definition validator
-     * @param initializer   bean initializer
+     * @param scanners    list of scanners for
+     * @param validator   bean definition validator
+     * @param initializer bean initializer
      */
     public ApplicationContextImpl(List<BeanScanner> scanners,
                                   BeanValidator validator,
@@ -41,7 +45,7 @@ public class ApplicationContextImpl implements ApplicationContext {
 
         List<BeanDefinition> beanDefinitionList = runScanning(scanners);
         validator.validate(beanDefinitionList);
-        populateBeansDefinitionTable(beanDefinitionList);
+        beanDefinitionTable = populateBeansDefinitionTable(beanDefinitionList);
         initializer.initialize(beanDefinitionTable);
 
         log.info("Application context initialized");
@@ -50,19 +54,20 @@ public class ApplicationContextImpl implements ApplicationContext {
     private List<BeanDefinition> runScanning(List<BeanScanner> scanners) {
         log.info("Scanning application for finding bean definitions");
 
-        return new ArrayList<>(scanners.stream()
+        return scanners.stream()
                 .map(BeanScanner::scan)
                 .flatMap(List::stream)
-                .toList());
+                .toList();
     }
 
-    private void populateBeansDefinitionTable(List<BeanDefinition> beanDefinitionList) {
+    private Table<String, Class<?>, BeanDefinition> populateBeansDefinitionTable(List<BeanDefinition> beanDefinitionList) {
         log.debug("Store scanned bean definition in application context");
-        beanDefinitionTable = HashBasedTable.create();
+        HashBasedTable<String, Class<?>, BeanDefinition> beanDefinitionTable = HashBasedTable.create();
         for (BeanDefinition beanDefinition : beanDefinitionList) {
             log.debug("Bean definition with name = {} and type = {} will be added", beanDefinition.name(), beanDefinition.type());
             beanDefinitionTable.put(beanDefinition.name(), beanDefinition.type(), beanDefinition);
         }
+        return beanDefinitionTable;
     }
 
     @Override
@@ -83,7 +88,7 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     @Override
     public <T> T getBean(Class<T> beanType) {
-        Objects.requireNonNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
+        checkNotNull(beanType, "The argument [beanType] must be not null");
 
         List<T> beans = beanDefinitionTable.column(beanType)
                 .values()
@@ -91,7 +96,7 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .map(beanDefinition -> beanType.cast(beanDefinition.instance()))
                 .toList();
         if (beans.isEmpty()) {
-            throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName()));
+            throw new NoSuchBeanException("Bean with provided name/type [%s] not found in the context".formatted(beanType.getSimpleName()));
         } else if (beans.size() > 1) {
             throw new NoUniqueBeanException("Expected single bean of type %s, but found %d".formatted(beanType.getSimpleName(), beans.size()));
         } else return beans.get(0);
@@ -106,31 +111,30 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .stream()
                 .findFirst()
                 .map(BeanDefinition::instance)
-                .orElseThrow(() -> new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName)));
+                .orElseThrow(() -> new NoSuchBeanException("Bean with provided name/type [%s] not found in the context".formatted(beanName)));
     }
 
     @Override
     public <T> T getBean(String beanName, Class<T> beanType) {
+        checkNotNull(beanType, "The argument [beanType] must be not null");
         checkBeanName(beanName);
-        Objects.requireNonNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
 
         Object bean = getBean(beanName);
         if (bean.getClass().isAssignableFrom(beanType)) {
             return beanType.cast(bean);
         } else {
-            throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName));
+            throw new NoSuchBeanException("Bean with provided name/type [%s] not found in the context".formatted(beanName));
         }
     }
 
     @Override
     public <T> Map<String, T> getAllBeans(Class<T> beanType) {
-        Objects.requireNonNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
+        checkNotNull(beanType, "The argument [beanType] must be not null");
 
         return beanDefinitionTable.column(beanType)
                 .entrySet()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> beanType.cast(entry.getValue().instance())));
-
     }
 
     @Override
@@ -140,15 +144,9 @@ public class ApplicationContextImpl implements ApplicationContext {
     }
 
     private void checkBeanName(String beanName) {
-        if (beanName == null) {
-            throw new IllegalArgumentException("The argument [beanName] must be not null");
-        } else if (beanName.isEmpty()) {
-            throw new IllegalArgumentException("The argument [beanName] must be not empty");
-        } else if (beanName.isBlank()) {
-            throw new IllegalArgumentException("The argument [beanName] must be not blank");
-        } else if (beanName.contains(" ")) {
-            throw new IllegalArgumentException("The argument [beanName] must not contain spaces");
-        }
+        checkArgument(isNotEmpty(beanName), "The argument [beanName] must be not null or empty");
+        checkArgument(isNotBlank(beanName), "The argument [beanName] must be not blank");
+        checkArgument(containsNone(beanName, SPACE), "The argument [beanName] must not contain spaces");
     }
 
 }
