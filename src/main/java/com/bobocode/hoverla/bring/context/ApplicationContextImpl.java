@@ -19,11 +19,11 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 @Slf4j
 class ApplicationContextImpl implements ApplicationContext {
 
-    private final String BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanType] must be not null";
-    private final String BEAN_NAME_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanName] must be not null or empty";
-    private final String BEAN_NAME_MUST_NOT_CONTAIN_SPACES = "The argument [beanName] must not contain spaces";
-    private final String NO_SUCH_BEAN_EXCEPTION_MESSAGE = "Bean with provided name/type [%s] not found in the context";
-    private final String NO_UNIQUE_BEAN_EXCEPTION_MESSAGE = "Expected single bean of type %s, but found %d";
+    private static final String BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanType] must be not null";
+    private static final String BEAN_NAME_MUST_NOT_CONTAIN_SPACES = "The argument [beanName] must not contain spaces";
+    private static final String BEAN_NAME_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanName] must be not null or empty";
+    private static final String NO_SUCH_BEAN_EXCEPTION_MESSAGE = "Bean with provided name/type [%s] not found in the context";
+    private static final String NO_UNIQUE_BEAN_EXCEPTION_MESSAGE = "Expected single bean of type %s, but found %d";
     private Table<String, Class<?>, BeanDefinition> beanDefinitionTable;
 
     /**

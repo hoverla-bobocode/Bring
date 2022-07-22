@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @TestInstance(value = TestInstance.Lifecycle.PER_CLASS)
-public class ApplicationContextImplTest {
+class ApplicationContextImplTest {
 
     private ApplicationContext applicationContext;
     private BeanScanner beanScannerOne;
