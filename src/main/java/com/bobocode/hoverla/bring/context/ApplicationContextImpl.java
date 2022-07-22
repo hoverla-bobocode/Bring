@@ -17,10 +17,6 @@ import static org.apache.commons.lang3.StringUtils.containsNone;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
-
-/**
- * Implementation of ApplicationContext
- */
 @Slf4j
 public class ApplicationContextImpl implements ApplicationContext {
 
@@ -52,8 +48,6 @@ public class ApplicationContextImpl implements ApplicationContext {
     }
 
     private List<BeanDefinition> runScanning(List<BeanScanner> scanners) {
-        log.info("Scanning application for finding bean definitions");
-
         return scanners.stream()
                 .map(BeanScanner::scan)
                 .flatMap(List::stream)
