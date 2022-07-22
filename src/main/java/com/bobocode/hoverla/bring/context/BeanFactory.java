@@ -27,7 +27,7 @@ public interface BeanFactory {
      *
      * @param beanName name of the desired instance
      * @return instance object
-     * @throws NoSuchBeanException if instance with provided name and type is not found
+     * @throws NoSuchBeanException if instance with provided name is not found
      */
     Object getBean(String beanName);
 
@@ -54,8 +54,8 @@ public interface BeanFactory {
     /**
      * Checks whether the bean with the given name is handled by current factory.
      *
-     * @param name name of the desired instance
-     * @return true if the bean type matches, false otherwise
+     * @param beanName name of the desired instance
+     * @return true if the bean name matches, false otherwise
      */
-    boolean containsBean(String name);
+    boolean containsBean(String beanName);
 }

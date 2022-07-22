@@ -9,4 +9,8 @@ public class NoSuchBeanException extends RuntimeException {
     public NoSuchBeanException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public NoSuchBeanException(String message) {
+        super(message);
+    }
 }
