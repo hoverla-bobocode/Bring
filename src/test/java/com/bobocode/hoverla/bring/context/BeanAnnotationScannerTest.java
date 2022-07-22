@@ -16,7 +16,6 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -42,7 +41,7 @@ class BeanAnnotationScannerTest {
         Set<Class<?>> expectedBeanClasses = Set.of(TestBean1.class, TestBean2.class, TestBean3.class, TestBean4.class);
         for (Class<?> beanClass : expectedBeanClasses) {
             BeanDefinition expectedBD = prepareBeanDefinition(beanClass);
-            when(mapper.mapToBeanDefinition(eq(beanClass))).thenReturn(expectedBD);
+            when(mapper.mapToBeanDefinition(beanClass)).thenReturn(expectedBD);
         }
 
         var beanAnnotationScanner = new BeanAnnotationScanner(validator, mapper, TEST_PACKAGE_TO_SCAN);
