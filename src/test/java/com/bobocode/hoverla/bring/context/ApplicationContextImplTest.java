@@ -67,7 +67,7 @@ public class ApplicationContextImplTest {
     }
 
     @Test
-    @DisplayName("Scan, validate and initialized methods have been called")
+    @DisplayName("Calls bean scanners, context validator and bean initializer during on creation")
     void applicationContextInitializingTest()  {
         verify(beanScannerOne).scan();
         verify(beanScannerTwo).scan();
@@ -81,7 +81,7 @@ public class ApplicationContextImplTest {
     @DisplayName("Getting a bean from the context by bean type")
     void getBeanByType() {
         Integer bean = applicationContext.getBean(Integer.class);
-        assertEquals(bean, 2);
+        assertEquals(2, bean);
     }
 
     @Test
@@ -134,11 +134,11 @@ public class ApplicationContextImplTest {
 
         String beanOne = beans.get("String");
         assertNotNull(beanOne);
-        assertEquals(beanOne, "String bean");
+        assertEquals("String bean", beanOne);
 
         String beanTwo = beans.get("One more string bean");
         assertNotNull(beanTwo);
-        assertEquals(beanTwo, "String bean");
+        assertEquals("String bean", beanTwo);
     }
 
     @Test

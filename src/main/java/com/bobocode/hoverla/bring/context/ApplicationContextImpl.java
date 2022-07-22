@@ -14,12 +14,16 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 import static org.apache.commons.lang3.StringUtils.containsNone;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Slf4j
-public class ApplicationContextImpl implements ApplicationContext {
+class ApplicationContextImpl implements ApplicationContext {
 
+    private final String BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanType] must be not null";
+    private final String BEAN_NAME_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanName] must be not null or empty";
+    private final String BEAN_NAME_MUST_NOT_CONTAIN_SPACES = "The argument [beanName] must not contain spaces";
+    private final String NO_SUCH_BEAN_EXCEPTION_MESSAGE = "Bean with provided name/type [%s] not found in the context";
+    private final String NO_UNIQUE_BEAN_EXCEPTION_MESSAGE = "Expected single bean of type %s, but found %d";
     private Table<String, Class<?>, BeanDefinition> beanDefinitionTable;
 
     /**
@@ -56,12 +60,12 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     private Table<String, Class<?>, BeanDefinition> populateBeansDefinitionTable(List<BeanDefinition> beanDefinitionList) {
         log.debug("Store scanned bean definition in application context");
-        HashBasedTable<String, Class<?>, BeanDefinition> beanDefinitionTable = HashBasedTable.create();
+        Table<String, Class<?>, BeanDefinition> table = HashBasedTable.create();
         for (BeanDefinition beanDefinition : beanDefinitionList) {
             log.debug("Bean definition with name = {} and type = {} will be added", beanDefinition.name(), beanDefinition.type());
-            beanDefinitionTable.put(beanDefinition.name(), beanDefinition.type(), beanDefinition);
+            table.put(beanDefinition.name(), beanDefinition.type(), beanDefinition);
         }
-        return beanDefinitionTable;
+        return table;
     }
 
     @Override
@@ -82,7 +86,7 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     @Override
     public <T> T getBean(Class<T> beanType) {
-        checkNotNull(beanType, "The argument [beanType] must be not null");
+        checkNotNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
 
         List<T> beans = beanDefinitionTable.column(beanType)
                 .values()
@@ -90,9 +94,9 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .map(beanDefinition -> beanType.cast(beanDefinition.instance()))
                 .toList();
         if (beans.isEmpty()) {
-            throw new NoSuchBeanException("Bean with provided name/type [%s] not found in the context".formatted(beanType.getSimpleName()));
+            throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName()));
         } else if (beans.size() > 1) {
-            throw new NoUniqueBeanException("Expected single bean of type %s, but found %d".formatted(beanType.getSimpleName(), beans.size()));
+            throw new NoUniqueBeanException(NO_UNIQUE_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName(), beans.size()));
         } else return beans.get(0);
     }
 
@@ -105,25 +109,25 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .stream()
                 .findFirst()
                 .map(BeanDefinition::instance)
-                .orElseThrow(() -> new NoSuchBeanException("Bean with provided name/type [%s] not found in the context".formatted(beanName)));
+                .orElseThrow(() -> new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName)));
     }
 
     @Override
     public <T> T getBean(String beanName, Class<T> beanType) {
-        checkNotNull(beanType, "The argument [beanType] must be not null");
+        checkNotNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
         checkBeanName(beanName);
 
         Object bean = getBean(beanName);
         if (bean.getClass().isAssignableFrom(beanType)) {
             return beanType.cast(bean);
         } else {
-            throw new NoSuchBeanException("Bean with provided name/type [%s] not found in the context".formatted(beanName));
+            throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName));
         }
     }
 
     @Override
     public <T> Map<String, T> getAllBeans(Class<T> beanType) {
-        checkNotNull(beanType, "The argument [beanType] must be not null");
+        checkNotNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
 
         return beanDefinitionTable.column(beanType)
                 .entrySet()
@@ -138,9 +142,8 @@ public class ApplicationContextImpl implements ApplicationContext {
     }
 
     private void checkBeanName(String beanName) {
-        checkArgument(isNotEmpty(beanName), "The argument [beanName] must be not null or empty");
-        checkArgument(isNotBlank(beanName), "The argument [beanName] must be not blank");
-        checkArgument(containsNone(beanName, SPACE), "The argument [beanName] must not contain spaces");
+        checkArgument(isNotEmpty(beanName), BEAN_NAME_MUST_BE_NOT_NULL_MESSAGE);
+        checkArgument(containsNone(beanName, SPACE), BEAN_NAME_MUST_NOT_CONTAIN_SPACES);
     }
 
 }
