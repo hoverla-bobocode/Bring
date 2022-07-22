@@ -41,7 +41,7 @@ class ApplicationContextImpl implements ApplicationContext {
      * @param initializer bean initializer
      */
     public ApplicationContextImpl(List<BeanScanner> scanners,
-                                  BeanValidator validator,
+                                  BeanDefinitionValidator validator,
                                   BeanInitializer initializer) {
 
         List<BeanDefinition> beanDefinitionList = runScanning(scanners);

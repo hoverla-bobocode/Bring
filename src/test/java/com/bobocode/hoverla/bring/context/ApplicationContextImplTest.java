@@ -31,7 +31,7 @@ class ApplicationContextImplTest {
     private ApplicationContext applicationContext;
     private BeanScanner beanScannerOne;
     private BeanScanner beanScannerTwo;
-    private BeanValidator validator;
+    private BeanDefinitionValidator validator;
     private BeanInitializer initializer;
 
     @BeforeAll
@@ -40,7 +40,7 @@ class ApplicationContextImplTest {
         beanScannerTwo = Mockito.mock(BeanScanner.class);
         List<BeanScanner> beanScannerList = Arrays.asList(beanScannerOne, beanScannerTwo);
 
-        validator = Mockito.mock(BeanValidator.class);
+        validator = Mockito.mock(BeanDefinitionValidator.class);
 
         initializer = Mockito.mock(BeanInitializer.class);
 
@@ -68,7 +68,7 @@ class ApplicationContextImplTest {
 
     @Test
     @DisplayName("Calls bean scanners, context validator and bean initializer during on creation")
-    void applicationContextInitializingTest()  {
+    void applicationContextInitializingTest() {
         verify(beanScannerOne).scan();
         verify(beanScannerTwo).scan();
 
