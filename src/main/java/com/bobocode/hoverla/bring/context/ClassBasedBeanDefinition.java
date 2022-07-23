@@ -47,13 +47,24 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     }
 
     private static void checkIfClassHasManyConstructor(Class<?> beanClass) {
-        long countOfConstructors = Arrays.stream(beanClass.getConstructors())
-                .filter(constructor -> constructor.isAnnotationPresent(Inject.class))
-                .count();
 
-        if (countOfConstructors > 1) {
-            throw new BeanDefinitionConstructionException("'class %s' bean has multiple constructors marked as @%s".formatted(beanClass.getName(), Inject.class.getSimpleName()));
+        final Constructor<?>[] constructors = beanClass.getConstructors();
+        int constructorsCount = 0;
+        for (Constructor<?> constructor : constructors) {
+            if (constructor.isAnnotationPresent(Inject.class)) {
+                constructorsCount++;
+                if (constructorsCount > 1) {
+                    throw new BeanDefinitionConstructionException("'class %s' bean has multiple constructors marked as @%s".formatted(beanClass.getName(), Inject.class.getSimpleName()));
+                }
+            }
         }
+//        long countOfConstructors = Arrays.stream(beanClass.getConstructors())
+//                .filter(constructor -> constructor.isAnnotationPresent(Inject.class))
+//                .count();
+
+//        if (countOfConstructors > 1) {
+//            throw new BeanDefinitionConstructionException("'class %s' bean has multiple constructors marked as @%s".formatted(beanClass.getName(), Inject.class.getSimpleName()));
+//        }
     }
 
     private static String getName(Class<?> beanClass) {
@@ -128,7 +139,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
             return instance;
 
         } catch (Exception e) {
-            throw new BeanInstanceCreationException("'class %s' bean can't be instantiated".formatted(type.getName()), e);
+            throw new BeanInstanceCreationException("'%s' bean can't be instantiated".formatted(name), e);
         }
     }
 
@@ -137,92 +148,80 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         Optional<Constructor<?>> constructorOptional = Arrays.stream(type.getConstructors())
                 .filter(constructor -> constructor.isAnnotationPresent(Inject.class)).findAny();
 
-        List<Field> fieldsWithInjectAnnotation = Arrays.stream(type.getDeclaredFields()).filter(field -> field.isAnnotationPresent(Inject.class)).toList();
-        //List<Field> fieldsWithQualifierAnnotation = Arrays.stream(type.getDeclaredFields()).filter(field -> field.isAnnotationPresent(Qualifier.class)).toList();
-
-        List<Field> fields = new ArrayList<>();
-
-        if (!fieldsWithInjectAnnotation.isEmpty()) {
-            fields.addAll(fieldsWithInjectAnnotation);
-        }
-
-//        if (!fieldsWithQualifierAnnotation.isEmpty()) {
-//            fields.addAll(fieldsWithQualifierAnnotation);
-//        }
-
-        Object newInstance = type.getDeclaredConstructor().newInstance();
-
-        if (constructorOptional.isPresent() && !(fields.isEmpty())) {
-
-            newInstance = createInstanceUsingConstructor(constructorOptional.get(), dependencies);
-
-            if (newInstance != null) {
-
-                List<Field> fieldsForInjectInClass = Arrays.stream(newInstance.getClass().getFields()).filter(field -> field.isAnnotationPresent(Inject.class))
-                        .toList();
-
-                List<BeanDefinition> beanDefinitionsForInjectionIntoFields = fieldsForInjectInClass.stream()
-                        .flatMap(field -> Arrays.stream(dependencies).filter(dependency -> dependency.name().equals(field.getClass().getSimpleName()) && dependency.type().equals(field.getType())))
-                        .toList();
-
-                fieldsForInjectInClass.forEach(field -> {
-                    Optional<BeanDefinition> optionalBeanDefinition = beanDefinitionsForInjectionIntoFields.stream()
-                            .flatMap(object -> Arrays.stream(dependencies).filter(dependency -> dependency.name().equals(object.name()) && dependency.type().equals(object.type())))
-                            .findAny();
-
-                    try {
-                        if (optionalBeanDefinition.isPresent()) {
-                            BeanDefinition oldValue = optionalBeanDefinition.get().getClass().getDeclaredConstructor().newInstance();
-                            field.setAccessible(true);
-                            field.set(oldValue, optionalBeanDefinition.get());
-                        }
-                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                             NoSuchMethodException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-            }
-        }
-        if (constructorOptional.isEmpty() && !fields.isEmpty()) {
-            Object fieldInstance = type.getDeclaredConstructor().newInstance();
-
-            List<BeanDefinition> dependenciesForFields = fields.stream()
-                    .flatMap(field -> Arrays.stream(dependencies).filter(dependency -> dependency.getClass().getSimpleName().equals(field.getClass().getSimpleName())))
-                    .toList();
-
-            fields.forEach(field -> {
-                try {
-                    BeanDefinition beanDefinition = dependenciesForFields.stream().filter(dependency -> dependency.name().equals(field.getName())).findAny().get();
-                    field.setAccessible(true);
-                    field.set(fieldInstance, beanDefinition);
-                } catch (IllegalAccessException e) {
-                    throw new BeanInstanceCreationException("", e);
-                }
-            });
-            newInstance = fieldInstance;
-        }
-
-        if(constructorOptional.isPresent() && fields.isEmpty()) {
-            newInstance = createInstanceUsingConstructor(constructorOptional.get(), dependencies);
-        }
-
-        return newInstance;
-    }
-
-    private static Object createInstanceUsingConstructor(Constructor<?> constructor, BeanDefinition... dependencies) throws InvocationTargetException, InstantiationException, IllegalAccessException {
-        Object newInstance = constructor.getClass();
-        List<Parameter> constructorParameters = Arrays.stream(constructor.getParameters()).toList();
-
-        List<Object> dependenciesForConstructor = constructorParameters.stream()
-                .flatMap(parameter -> Arrays.stream(dependencies)
-                        .filter(dependency -> dependency.name().equals(parameter.getClass().getSimpleName()) && dependency.type().equals(parameter.getType())))
-                .map(BeanDefinition::instance)
+        List<Field> fieldsWithInjectAnnotation = Arrays.stream(type.getDeclaredFields())
+                .filter(field -> field.isAnnotationPresent(Inject.class))
                 .toList();
 
+        Optional<Object> beanInstance = Optional.empty();
 
-        if (constructor.getParameterCount() == dependenciesForConstructor.size()) {
-            newInstance = constructor.newInstance(constructorParameters);
+        if (constructorOptional.isPresent()) {
+
+            beanInstance = Optional.of(createInstanceUsingConstructor(constructorOptional.get(), dependencies));
         }
-        return newInstance;
+
+        if (beanInstance.isEmpty()) {
+            beanInstance = Optional.of(type.getDeclaredConstructor().newInstance());
+        }
+
+        List<BeanDefinition> dependenciesForFields = fieldsWithInjectAnnotation.stream()
+                .flatMap(field -> Arrays.stream(dependencies)
+                        .filter(dependency -> equalBeanName(field, dependency)))
+                .toList();
+
+        final Object injectableBean = beanInstance.get();
+        fieldsWithInjectAnnotation.forEach(field -> {
+            try {
+                Optional<BeanDefinition> beanDefinition = dependenciesForFields.stream()
+                        .filter(dependency -> {
+                            if (field.isAnnotationPresent(Qualifier.class) &&
+                                    field.getAnnotation(Qualifier.class).value().equals(dependency.name())) {
+                                return true;
+                            }
+                            return field.getType().getSimpleName().equals(dependency.name());
+                        })
+                        .findAny();
+                if (beanDefinition.isPresent()) {
+                    field.setAccessible(true);
+                    field.set(injectableBean, Objects.requireNonNull(beanDefinition.get().instance()));
+                }
+            } catch (IllegalAccessException e) {
+//                throw new BeanInstanceCreationException(String.format("'%s' bean can't be instantiated", name), e);
+                throw new BeanInstanceCreationException("", e);
+            }
+        });
+        return beanInstance.get();
+    }
+
+    private boolean equalBeanName(Field field, BeanDefinition dependency) {
+        if (field.isAnnotationPresent(Qualifier.class) &&
+                field.getAnnotation(Qualifier.class).value().equals(dependency.name())) {
+            return true;
+        }
+        final Class<?> fieldType = field.getType();
+        return fieldType.getSimpleName().equals(dependency.name()) &&
+                fieldType.equals(dependency.type());
+    }
+
+    private static Object createInstanceUsingConstructor(Constructor<?> constructor, BeanDefinition... dependencies) {
+        List<Object> dependenciesForConstructor = Arrays.stream(constructor.getParameters())
+                .map(parameter -> getFromDependencies(parameter, dependencies))
+                .filter(Optional::isPresent)
+                .map(dependency -> dependency.get().instance())
+                .toList();
+
+        try {
+            return constructor.newInstance(dependenciesForConstructor.toArray());
+        } catch (InstantiationException | IllegalAccessException |
+                 IllegalArgumentException | InvocationTargetException exception) {
+            throw new BeanInstanceCreationException("Invalid bean dependencies . Bean %s. Dependencies: ".formatted(constructor.getDeclaringClass())
+                    + Arrays.toString(dependencies), exception);
+        }
+    }
+
+    private static Optional<BeanDefinition> getFromDependencies(Parameter parameter, BeanDefinition[] dependencies) {
+        return Arrays.stream(dependencies)
+                .filter(dependency -> dependency.type().equals(parameter.getType()) &&
+                        dependency.name().equals(parameter.getType().getSimpleName()))
+                .findAny();
     }
 }

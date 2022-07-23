@@ -34,7 +34,7 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasName(methodName);
+                .hasName(methodName);
     }
 
     @Test
@@ -45,7 +45,7 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasName("beanName");
+                .hasName("beanName");
     }
 
     @Test
@@ -56,7 +56,7 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasType(String.class);
+                .hasType(String.class);
     }
 
     @Test
@@ -74,7 +74,7 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasDependencies(dependencies);
+                .hasDependencies(dependencies);
     }
 
     @Test
@@ -86,9 +86,9 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         Assertions.assertThatThrownBy(beanDefinition::instance)
-                  .isInstanceOf(BeanInstanceCreationException.class)
-                  .hasMessageContaining("'beanWithDependencies' bean can't be instantiated")
-                  .hasStackTraceContaining("wrong number of arguments");
+                .isInstanceOf(BeanInstanceCreationException.class)
+                .hasMessageContaining("'beanWithDependencies' bean can't be instantiated")
+                .hasStackTraceContaining("wrong number of arguments");
     }
 
     @Test
@@ -98,8 +98,8 @@ class ConfigBasedBeanDefinitionTest {
         Method method = configInstance.getClass().getMethod("bean");
 
         Assertions.assertThatThrownBy(() -> new ConfigBasedBeanDefinition(configInstance, method))
-                  .isInstanceOf(BeanDefinitionConstructionException.class)
-                  .hasMessageContaining("Configuration class instance passed is not marked as @Configuration");
+                .isInstanceOf(BeanDefinitionConstructionException.class)
+                .hasMessageContaining("Configuration class instance passed is not marked as @Configuration");
     }
 
     @Test
@@ -108,8 +108,8 @@ class ConfigBasedBeanDefinitionTest {
         Method method = testBeanConfig.getClass().getMethod("notBeanMethod");
 
         Assertions.assertThatThrownBy(() -> new ConfigBasedBeanDefinition(testBeanConfig, method))
-                  .isInstanceOf(BeanDefinitionConstructionException.class)
-                  .hasMessageContaining("Configuration method to create bean is not marked as @Bean");
+                .isInstanceOf(BeanDefinitionConstructionException.class)
+                .hasMessageContaining("Configuration method to create bean is not marked as @Bean");
     }
 
     @Test
@@ -121,13 +121,13 @@ class ConfigBasedBeanDefinitionTest {
 
         // Has no instance before calling instance()
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasFieldOrPropertyWithValue("instance", null);
+                .hasFieldOrPropertyWithValue("instance", null);
 
         Object instance = beanDefinition.instance();
 
         // Has an instance after calling instance()
-         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasFieldOrPropertyWithValue("instance", instance);
+        BeanDefinitionAssert.assertThat(beanDefinition)
+                .hasFieldOrPropertyWithValue("instance", instance);
 
         Object cachedInstance = beanDefinition.instance();
 
