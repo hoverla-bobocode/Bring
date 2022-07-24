@@ -79,30 +79,34 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     }
 
     private static Map<String, Class<?>> getDependencies(Class<?> beanClass) {
-        Map<String, Class<?>> dependencies = new HashMap<>();
-
+        Map<String, Class<?>> dependencies = new LinkedHashMap<>();
         if (beanClass.getConstructors().length != 0) {
             var constructors = Arrays.stream(beanClass.getConstructors())
                     .filter(constructor -> constructor.isAnnotationPresent(Inject.class))
                     .map(Constructor::getParameters)
                     .flatMap(Arrays::stream)
                     .collect(toMap(Parameter::getName, Parameter::getType));
+
             dependencies.putAll(constructors);
         }
 
-        if (beanClass.getFields().length != 0) {
-            var qualifierAnnotatedFields = Arrays.stream(beanClass.getFields())
-                    .filter(field -> field.isAnnotationPresent(Inject.class) && field.isAnnotationPresent(Qualifier.class))
-                    .collect(toMap(field -> field.getAnnotation(Qualifier.class).value(), Field::getType));
+        if (beanClass.getDeclaredFields().length != 0) {
+            var fields = Arrays.stream(beanClass.getDeclaredFields())
+                    .filter(field -> field.isAnnotationPresent(Inject.class))
+                    .collect(toMap(ClassBasedBeanDefinition::getParameterName, Field::getType));
 
-            var onlyInjectAnnotatedFields = Arrays.stream(beanClass.getFields())
-                    .filter(field -> field.isAnnotationPresent(Inject.class) && !field.isAnnotationPresent(Qualifier.class))
-                    .collect(toMap(Field::getName, Field::getType));
-
-            dependencies.putAll(qualifierAnnotatedFields);
-            dependencies.putAll(onlyInjectAnnotatedFields);
+            dependencies.putAll(fields);
         }
+
         return dependencies;
+    }
+
+    private static String getParameterName(Field field) {
+        if (field.isAnnotationPresent(Qualifier.class)) {
+            return field.getAnnotation(Qualifier.class).value();
+        }
+
+        return field.getName().substring(0,1).toUpperCase() + field.getName().substring(1);
     }
 
     @Override
@@ -139,7 +143,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
             return instance;
 
         } catch (Exception e) {
-            throw new BeanInstanceCreationException("'%s' bean can't be instantiated".formatted(name), e);
+            throw new BeanInstanceCreationException("'%s' bean can't be instantiated".formatted(type.getSimpleName()), e);
         }
     }
 
@@ -185,8 +189,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
                     field.set(injectableBean, Objects.requireNonNull(beanDefinition.get().instance()));
                 }
             } catch (IllegalAccessException e) {
-//                throw new BeanInstanceCreationException(String.format("'%s' bean can't be instantiated", name), e);
-                throw new BeanInstanceCreationException("", e);
+                throw new BeanInstanceCreationException(String.format("'%s' bean can't be instantiated", name), e);
             }
         });
         return beanInstance.get();
@@ -213,7 +216,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
             return constructor.newInstance(dependenciesForConstructor.toArray());
         } catch (InstantiationException | IllegalAccessException |
                  IllegalArgumentException | InvocationTargetException exception) {
-            throw new BeanInstanceCreationException("Invalid bean dependencies . Bean %s. Dependencies: ".formatted(constructor.getDeclaringClass())
+            throw new BeanInstanceCreationException("Invalid bean dependencies. Bean %s. Dependencies: ".formatted(constructor.getDeclaringClass())
                     + Arrays.toString(dependencies), exception);
         }
     }

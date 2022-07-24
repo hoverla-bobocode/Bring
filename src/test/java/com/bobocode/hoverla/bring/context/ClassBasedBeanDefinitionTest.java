@@ -66,7 +66,7 @@ class ClassBasedBeanDefinitionTest {
     void testDependencies() {
         // given
         final Map<String, Class<?>> beanDependencies = Map.of(ClassBasedBeanDefinitionNoName.class.getSimpleName(), ClassBasedBeanDefinitionNoName.class,
-                ClassBasedBeanDefinitionWithName.class.getSimpleName(), ClassBasedBeanDefinitionWithName.class);
+                ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME, ClassBasedBeanDefinitionWithName.class);
 
         // when
         final ClassBasedBeanDefinition beanDefinition =
@@ -235,7 +235,7 @@ class ClassBasedBeanDefinitionTest {
     @DisplayName("Create bean instance. Parameters are nulls. Throws BeanInstanceCreationException")
     void testInstance_NullParameter_ThrowBeanInstanceCreationException() {
         // given
-        final String expectedMessage = "'%s' bean can't be instantiated".formatted(ClassBasedBeanDefinitionFieldInjection.class);
+        final String expectedMessage = "'%s' bean can't be instantiated".formatted(ClassBasedBeanDefinitionFieldInjection.class.getSimpleName());
         final ClassBasedBeanDefinition beanDefinition =
                 new ClassBasedBeanDefinition(ClassBasedBeanDefinitionFieldInjection.class);
 
