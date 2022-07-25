@@ -1,5 +1,6 @@
 package com.bobocode.hoverla.bring.context;
 
+import com.bobocode.hoverla.bring.annotation.Bean;
 import com.bobocode.hoverla.bring.exception.NoSuchBeanException;
 import com.bobocode.hoverla.bring.exception.NoUniqueBeanException;
 
@@ -8,6 +9,10 @@ import java.util.Map;
 /**
  * Convenient interface to work with IoC container, which provides read API only.
  * Allows getting registered beans by their names and types.
+ *
+ * @see Bean @Bean
+ * @see ApplicationContext
+ * @see BeanDefinition
  */
 public interface BeanFactory {
 

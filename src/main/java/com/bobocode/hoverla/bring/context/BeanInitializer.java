@@ -1,5 +1,6 @@
 package com.bobocode.hoverla.bring.context;
 
+import com.bobocode.hoverla.bring.annotation.Bean;
 import com.google.common.collect.Table;
 import lombok.extern.slf4j.Slf4j;
 
@@ -7,9 +8,12 @@ import java.util.Collection;
 
 /**
  * Class, responsible for triggering bean initialization.
- * <br>
- * Its main aim is to pass all dependencies of a particular {@link BeanDefinition}
- * to its {@link BeanDefinition#instance(BeanDefinition...)} method.
+ *
+ * <p>Its main aim is to find all dependencies of a particular {@link BeanDefinition} and pass them
+ * to its {@link BeanDefinition#instance(BeanDefinition...)} method.</p>
+ *
+ * @see Bean @Bean
+ * @see BeanDefinition
  */
 @Slf4j
 public class BeanInitializer {

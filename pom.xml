@@ -19,11 +19,12 @@
         <sonar.projectKey>hoverla-bobocode_Bring</sonar.projectKey>
         <logback.version>1.2.11</logback.version>
         <lombok.version>1.18.24</lombok.version>
+        <guava.version>31.1-jre</guava.version>
+        <commons-lang3.version>3.12.0</commons-lang3.version>
+        <reflections.version>0.10.2</reflections.version>
         <junit.version>5.8.2</junit.version>
         <mockito.version>4.6.1</mockito.version>
         <assertj.version>3.23.1</assertj.version>
-        <guava.version>31.1-jre</guava.version>
-        <commons-lang3.version>3.12.0</commons-lang3.version>
     </properties>
 
     <dependencies>
@@ -53,6 +54,11 @@
             <version>${commons-lang3.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>${reflections.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
@@ -61,6 +67,12 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
             <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
