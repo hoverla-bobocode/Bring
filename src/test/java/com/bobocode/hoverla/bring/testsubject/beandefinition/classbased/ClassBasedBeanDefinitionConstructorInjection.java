@@ -11,7 +11,6 @@ public class ClassBasedBeanDefinitionConstructorInjection {
     private final ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName;
     private final ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName;
 
-    @Inject
     public ClassBasedBeanDefinitionConstructorInjection(
             ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName,
             ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName) {

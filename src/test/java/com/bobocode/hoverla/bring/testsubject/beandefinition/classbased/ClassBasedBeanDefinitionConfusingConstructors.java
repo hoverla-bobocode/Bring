@@ -13,7 +13,6 @@ public class ClassBasedBeanDefinitionConfusingConstructors {
 
     private final ClassBasedBeanDefinitionNoDependencies classBasedBeanDefinitionNoDependencies;
 
-    @Inject
     public ClassBasedBeanDefinitionConfusingConstructors(
             ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName,
             ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName,
@@ -23,7 +22,6 @@ public class ClassBasedBeanDefinitionConfusingConstructors {
         this.classBasedBeanDefinitionNoDependencies = classBasedBeanDefinitionNoDependencies;
     }
 
-    @Inject
     public ClassBasedBeanDefinitionConfusingConstructors(
             ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName,
             ClassBasedBeanDefinitionNoDependencies classBasedBeanDefinitionNoDependencies) {

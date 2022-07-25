@@ -15,7 +15,6 @@ public class ClassBasedBeanDefinitionMultipleConstructors {
 
     private final ClassBasedBeanDefinitionNoDependencies classBasedBeanDefinitionNoDependencies;
 
-    @Inject
     public ClassBasedBeanDefinitionMultipleConstructors(
             ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName,
             ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName,

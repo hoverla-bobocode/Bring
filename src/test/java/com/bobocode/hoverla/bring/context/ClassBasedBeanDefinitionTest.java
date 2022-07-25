@@ -1,6 +1,5 @@
 package com.bobocode.hoverla.bring.context;
 
-import com.bobocode.hoverla.bring.annotation.Inject;
 import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.bobocode.hoverla.bring.testsubject.beandefinition.classbased.*;
@@ -42,8 +41,7 @@ class ClassBasedBeanDefinitionTest {
     @DisplayName("BeanDefinition instantiation of a bean with multiple constructors with @Inject annotation. Throws BeanDefinitionConstructionException")
     void testInitBeanDefinition_MultipleConfusingConstructors_ThrowException() {
         // given
-        final String expectedMessage = String.format("'%s' bean has multiple constructors marked as @%s",
-                ClassBasedBeanDefinitionConfusingConstructors.class, Inject.class.getSimpleName());
+        final String expectedMessage = String.format("'%s' bean has multiple constructors", ClassBasedBeanDefinitionConfusingConstructors.class);
 
         // then
         Assertions.assertThatThrownBy(() -> new ClassBasedBeanDefinition(ClassBasedBeanDefinitionConfusingConstructors.class))
@@ -275,47 +273,6 @@ class ClassBasedBeanDefinitionTest {
 
         when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
         when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME);
-        when(dependency3.name()).thenReturn(ClassBasedBeanDefinitionNoDependencies.class.getSimpleName());
-
-        when(dependency1.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoName.class);
-        when(dependency2.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionWithName.class);
-        when(dependency3.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoDependencies.class);
-
-        when(dependency1.instance()).thenReturn(dependencyInstance1);
-        when(dependency2.instance()).thenReturn(dependencyInstance2);
-        when(dependency3.instance()).thenReturn(dependencyInstance3);
-
-        // when
-        final Object instance = beanDefinition.instance(dependency1, dependency2, dependency3);
-
-        // then
-        assertNotNull(instance);
-        assertEquals(expectedBean, instance);
-
-        verify(dependency1).instance(any());
-        verify(dependency2, times(2)).instance(any());
-        verify(dependency3).instance(any());
-    }
-
-    @Test
-    @DisplayName("Create instance of a bean with multiple constructors")
-    void testInstance_ReturnBeanWithMultipleConstructors() {
-        // given
-        final ClassBasedBeanDefinition beanDefinition =
-                new ClassBasedBeanDefinition(ClassBasedBeanDefinitionMultipleConstructors.class);
-
-        final ClassBasedBeanDefinitionNoName dependencyInstance1 = new ClassBasedBeanDefinitionNoName();
-        final ClassBasedBeanDefinitionWithName dependencyInstance2 = new ClassBasedBeanDefinitionWithName();
-        final ClassBasedBeanDefinitionNoDependencies dependencyInstance3 = new ClassBasedBeanDefinitionNoDependencies();
-        final ClassBasedBeanDefinitionMultipleConstructors expectedBean =
-                new ClassBasedBeanDefinitionMultipleConstructors(dependencyInstance1, dependencyInstance2, dependencyInstance3);
-
-        final ClassBasedBeanDefinition dependency1 = mock(ClassBasedBeanDefinition.class);
-        final ClassBasedBeanDefinition dependency2 = mock(ClassBasedBeanDefinition.class);
-        final ClassBasedBeanDefinition dependency3 = mock(ClassBasedBeanDefinition.class);
-
-        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
-        when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.class.getSimpleName());
         when(dependency3.name()).thenReturn(ClassBasedBeanDefinitionNoDependencies.class.getSimpleName());
 
         when(dependency1.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoName.class);

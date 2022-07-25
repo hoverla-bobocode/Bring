@@ -20,7 +20,6 @@ public class ClassBasedBeanDefinitionConstructorFieldInjection {
 
     private final ClassBasedBeanDefinitionNoDependencies classBasedBeanDefinitionNoDependencies;
 
-    @Inject
     public ClassBasedBeanDefinitionConstructorFieldInjection(
             @Qualifier(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME) ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName,
             ClassBasedBeanDefinitionNoDependencies classBasedBeanDefinitionNoDependencies) {

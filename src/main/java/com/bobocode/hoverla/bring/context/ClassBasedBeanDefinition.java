@@ -47,16 +47,8 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     }
 
     private static void checkIfClassHasManyConstructor(Class<?> beanClass) {
-
-        final Constructor<?>[] constructors = beanClass.getConstructors();
-        int constructorsCount = 0;
-        for (Constructor<?> constructor : constructors) {
-            if (constructor.isAnnotationPresent(Inject.class)) {
-                constructorsCount++;
-                if (constructorsCount > 1) {
-                    throw new BeanDefinitionConstructionException("'class %s' bean has multiple constructors marked as @%s".formatted(beanClass.getName(), Inject.class.getSimpleName()));
-                }
-            }
+        if (beanClass.getConstructors().length > 1) {
+            throw new BeanDefinitionConstructionException("'class %s' bean has multiple constructors".formatted(beanClass.getName()));
         }
     }
 
@@ -73,14 +65,12 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
 
     private static Map<String, Class<?>> getDependencies(Class<?> beanClass) {
         Map<String, Class<?>> dependencies = new LinkedHashMap<>();
-        if (beanClass.getConstructors().length != 0) {
-            var constructors = Arrays.stream(beanClass.getConstructors())
-                    .filter(constructor -> constructor.isAnnotationPresent(Inject.class))
-                    .map(Constructor::getParameters)
-                    .flatMap(Arrays::stream)
-                    .collect(toMap(Parameter::getName, Parameter::getType));
 
-            dependencies.putAll(constructors);
+        if (beanClass.getConstructors().length != 0) {
+            Constructor<?> constructor = beanClass.getConstructors()[0];
+            var constructorsParameters = Arrays.stream(constructor.getParameters()).collect(toMap(Parameter::getName, Parameter::getType));
+
+            dependencies.putAll(constructorsParameters);
         }
 
         if (beanClass.getDeclaredFields().length != 0) {
@@ -142,8 +132,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
 
     private Object getInstance(BeanDefinition... dependencies) throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchMethodException {
 
-        Optional<Constructor<?>> constructorOptional = Arrays.stream(type.getConstructors())
-                .filter(constructor -> constructor.isAnnotationPresent(Inject.class)).findAny();
+        Optional<Constructor<?>> constructorOptional = Arrays.stream(type.getConstructors()).findFirst();
 
         List<Field> fieldsWithInjectAnnotation = Arrays.stream(type.getDeclaredFields())
                 .filter(field -> field.isAnnotationPresent(Inject.class))
@@ -152,7 +141,6 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         Optional<Object> beanInstance = Optional.empty();
 
         if (constructorOptional.isPresent()) {
-
             beanInstance = Optional.of(createInstanceUsingConstructor(constructorOptional.get(), dependencies));
         }
 
