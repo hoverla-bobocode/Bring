@@ -15,6 +15,7 @@ public class ClassBasedBeanDefinitionConfusingDependencies {
     private ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName;
 
     @Inject
+    @Qualifier(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME)
     private final ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName;
 
     private final ClassBasedBeanDefinitionNoDependencies classBasedBeanDefinitionNoDependencies;

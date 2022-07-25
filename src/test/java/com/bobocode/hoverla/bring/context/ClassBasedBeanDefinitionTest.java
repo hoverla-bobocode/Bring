@@ -184,7 +184,7 @@ class ClassBasedBeanDefinitionTest {
         final ClassBasedBeanDefinition dependency3 = mock(ClassBasedBeanDefinition.class);
 
         when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
-        when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.class.getSimpleName());
+        when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME);
         when(dependency3.name()).thenReturn(ClassBasedBeanDefinitionNoDependencies.class.getSimpleName());
 
         when(dependency1.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoName.class);

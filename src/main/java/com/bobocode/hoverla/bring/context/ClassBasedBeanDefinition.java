@@ -58,13 +58,6 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
                 }
             }
         }
-//        long countOfConstructors = Arrays.stream(beanClass.getConstructors())
-//                .filter(constructor -> constructor.isAnnotationPresent(Inject.class))
-//                .count();
-
-//        if (countOfConstructors > 1) {
-//            throw new BeanDefinitionConstructionException("'class %s' bean has multiple constructors marked as @%s".formatted(beanClass.getName(), Inject.class.getSimpleName()));
-//        }
     }
 
     private static String getName(Class<?> beanClass) {
@@ -106,7 +99,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
             return field.getAnnotation(Qualifier.class).value();
         }
 
-        return field.getName().substring(0,1).toUpperCase() + field.getName().substring(1);
+        return field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
     }
 
     @Override
@@ -223,8 +216,19 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
 
     private static Optional<BeanDefinition> getFromDependencies(Parameter parameter, BeanDefinition[] dependencies) {
         return Arrays.stream(dependencies)
-                .filter(dependency -> dependency.type().equals(parameter.getType()) &&
-                        dependency.name().equals(parameter.getType().getSimpleName()))
+                .filter(dependency -> {
+                    final boolean typesEqual = dependency.type().equals(parameter.getType());
+
+                    if (typesEqual) {
+                        if (parameter.isAnnotationPresent(Qualifier.class)) {
+                            return parameter.getAnnotation(Qualifier.class).value().equals(
+                                    dependency.name());
+                        }
+                        return parameter.getType().getSimpleName().equals(
+                                dependency.name());
+                    }
+                    return false;
+                })
                 .findAny();
     }
 }
