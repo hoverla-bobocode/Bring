@@ -5,7 +5,6 @@ import com.bobocode.hoverla.bring.annotation.Inject;
 import lombok.EqualsAndHashCode;
 
 @Bean
-@EqualsAndHashCode
 public class ClassBasedBeanDefinitionConstructorInjection {
 
     private final ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName;

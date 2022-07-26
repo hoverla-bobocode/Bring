@@ -9,12 +9,15 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
 import java.util.*;
 
 import static java.util.stream.Collectors.toMap;
 
+/**
+ * Java Class-based bean definition. Requires instance of class marked with {@link Bean} instance.
+ * Field should be marked with {@link Inject} annotation for dependencies injection.
+ */
 @Slf4j
 public class ClassBasedBeanDefinition implements BeanDefinition {
 
@@ -26,6 +29,10 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
 
     private final Map<String, Class<?>> dependencies;
 
+    /**
+     *
+     * @param beanClass
+     */
     public ClassBasedBeanDefinition(Class<?> beanClass) {
         validate(beanClass);
 
@@ -39,10 +46,48 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         log.trace("'{}' bean dependencies are {}", name, dependencies);
     }
 
+    /**
+     * @return name of bean which is either equals to target bean class name
+     * or to name specified in {@link Bean} or {@link Qualifier} annotations
+     */
+    @Override
+    public String name() {
+        return name;
+    }
+
+    /**
+     * @return target bean method return type
+     */
+    @Override
+    public Class<?> type() {
+        return type;
+    }
+
+    /**
+     * @return dependencies map where keys are target bean method parameters name, and
+     * values are parameters types
+     */
+    @Override
+    public Map<String, Class<?>> dependencies() {
+        return dependencies;
+    }
+
+    /**
+     * Lazily initializes bean on the first call. After it happened further calls return a cached instance.
+     */
+    @Override
+    public Object instance(BeanDefinition... dependencies) {
+        if (instance != null) {
+            log.debug("Getting existing '{}' bean instance", name);
+            return instance;
+        }
+        return createInstance(dependencies);
+    }
+
     private static void validate(Class<?> beanClass) {
         log.debug("Validating arguments passed to create ClassBased");
 
-        Objects.requireNonNull(beanClass);
+        Objects.requireNonNull(beanClass, "Bean class can not be null");
         checkIfClassHasManyConstructor(beanClass);
     }
 
@@ -57,26 +102,23 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         String beanName = annotation.name();
 
         if (beanName.isEmpty()) {
-            return beanClass.getSimpleName();
+            return beanClass.getName();
         }
 
         return beanName;
     }
 
     private static Map<String, Class<?>> getDependencies(Class<?> beanClass) {
-        Map<String, Class<?>> dependencies = new LinkedHashMap<>();
 
-        if (beanClass.getConstructors().length != 0) {
-            Constructor<?> constructor = beanClass.getConstructors()[0];
-            var constructorsParameters = Arrays.stream(constructor.getParameters()).collect(toMap(Parameter::getName, Parameter::getType));
+        Constructor<?> constructor = beanClass.getConstructors()[0];
+        var constructorsParameters = Arrays.stream(constructor.getParameters()).collect(toMap(ClassBasedBeanDefinition::getParameterName, Parameter::getType));
 
-            dependencies.putAll(constructorsParameters);
-        }
+        Map<String, Class<?>> dependencies = new LinkedHashMap<>(constructorsParameters);
 
         if (beanClass.getDeclaredFields().length != 0) {
             var fields = Arrays.stream(beanClass.getDeclaredFields())
                     .filter(field -> field.isAnnotationPresent(Inject.class))
-                    .collect(toMap(ClassBasedBeanDefinition::getParameterName, Field::getType));
+                    .collect(toMap(ClassBasedBeanDefinition::getFieldName, Field::getType));
 
             dependencies.putAll(fields);
         }
@@ -84,37 +126,20 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         return dependencies;
     }
 
-    private static String getParameterName(Field field) {
+    private static String getFieldName(Field field) {
         if (field.isAnnotationPresent(Qualifier.class)) {
             return field.getAnnotation(Qualifier.class).value();
         }
 
-        return field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
+        return field.getName();
     }
 
-    @Override
-    public String name() {
-        return name;
-    }
-
-    @Override
-
-    public Class<?> type() {
-        return type;
-    }
-
-    @Override
-    public Map<String, Class<?>> dependencies() {
-        return dependencies;
-    }
-
-    @Override
-    public Object instance(BeanDefinition... dependencies) {
-        if (instance != null) {
-            log.debug("Getting existing '{}' bean instance", name);
-            return instance;
+    private static String getParameterName(Parameter parameter) {
+        if (parameter.isAnnotationPresent(Qualifier.class)) {
+            return parameter.getAnnotation(Qualifier.class).value();
         }
-        return createInstance(dependencies);
+
+        return parameter.getName();
     }
 
     private Object createInstance(BeanDefinition... dependencies) {
@@ -130,50 +155,24 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         }
     }
 
-    private Object getInstance(BeanDefinition... dependencies) throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchMethodException {
+    private Object getInstance(BeanDefinition... dependencies) {
 
-        Optional<Constructor<?>> constructorOptional = Arrays.stream(type.getConstructors()).findFirst();
+        Constructor<?> constructor = type.getConstructors()[0];
 
         List<Field> fieldsWithInjectAnnotation = Arrays.stream(type.getDeclaredFields())
                 .filter(field -> field.isAnnotationPresent(Inject.class))
                 .toList();
 
-        Optional<Object> beanInstance = Optional.empty();
-
-        if (constructorOptional.isPresent()) {
-            beanInstance = Optional.of(createInstanceUsingConstructor(constructorOptional.get(), dependencies));
-        }
-
-        if (beanInstance.isEmpty()) {
-            beanInstance = Optional.of(type.getDeclaredConstructor().newInstance());
-        }
+        Object beanInstance = createInstanceUsingConstructor(constructor, dependencies);
 
         List<BeanDefinition> dependenciesForFields = fieldsWithInjectAnnotation.stream()
                 .flatMap(field -> Arrays.stream(dependencies)
                         .filter(dependency -> equalBeanName(field, dependency)))
                 .toList();
 
-        final Object injectableBean = beanInstance.get();
-        fieldsWithInjectAnnotation.forEach(field -> {
-            try {
-                Optional<BeanDefinition> beanDefinition = dependenciesForFields.stream()
-                        .filter(dependency -> {
-                            if (field.isAnnotationPresent(Qualifier.class) &&
-                                    field.getAnnotation(Qualifier.class).value().equals(dependency.name())) {
-                                return true;
-                            }
-                            return field.getType().getSimpleName().equals(dependency.name());
-                        })
-                        .findAny();
-                if (beanDefinition.isPresent()) {
-                    field.setAccessible(true);
-                    field.set(injectableBean, Objects.requireNonNull(beanDefinition.get().instance()));
-                }
-            } catch (IllegalAccessException e) {
-                throw new BeanInstanceCreationException(String.format("'%s' bean can't be instantiated", name), e);
-            }
-        });
-        return beanInstance.get();
+        fieldsWithInjectAnnotation.forEach(field -> injectDependenciesIntoFields(beanInstance, dependenciesForFields, field));
+
+        return beanInstance;
     }
 
     private boolean equalBeanName(Field field, BeanDefinition dependency) {
@@ -182,7 +181,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
             return true;
         }
         final Class<?> fieldType = field.getType();
-        return fieldType.getSimpleName().equals(dependency.name()) &&
+        return fieldType.getName().equals(dependency.name()) &&
                 fieldType.equals(dependency.type());
     }
 
@@ -195,8 +194,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
 
         try {
             return constructor.newInstance(dependenciesForConstructor.toArray());
-        } catch (InstantiationException | IllegalAccessException |
-                 IllegalArgumentException | InvocationTargetException exception) {
+        } catch (Exception exception) {
             throw new BeanInstanceCreationException("Invalid bean dependencies. Bean %s. Dependencies: ".formatted(constructor.getDeclaringClass())
                     + Arrays.toString(dependencies), exception);
         }
@@ -204,19 +202,41 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
 
     private static Optional<BeanDefinition> getFromDependencies(Parameter parameter, BeanDefinition[] dependencies) {
         return Arrays.stream(dependencies)
-                .filter(dependency -> {
-                    final boolean typesEqual = dependency.type().equals(parameter.getType());
-
-                    if (typesEqual) {
-                        if (parameter.isAnnotationPresent(Qualifier.class)) {
-                            return parameter.getAnnotation(Qualifier.class).value().equals(
-                                    dependency.name());
-                        }
-                        return parameter.getType().getSimpleName().equals(
-                                dependency.name());
-                    }
-                    return false;
-                })
+                .filter(dependency -> isParameterEqualWithDependency(parameter, dependency))
                 .findAny();
+    }
+
+    private static boolean isParameterEqualWithDependency(Parameter parameter, BeanDefinition dependency) {
+        final boolean typesEqual = dependency.type().equals(parameter.getType());
+
+        if (typesEqual) {
+            if (parameter.isAnnotationPresent(Qualifier.class)) {
+                return parameter.getAnnotation(Qualifier.class).value().equals(
+                        dependency.name());
+            }
+            return parameter.getType().getName().equals(
+                    dependency.name());
+        }
+        return false;
+    }
+
+    private void injectDependenciesIntoFields(Object beanInstance, List<BeanDefinition> dependenciesForFields, Field field) {
+        try {
+            Optional<BeanDefinition> beanDefinition = dependenciesForFields.stream()
+                    .filter(dependency -> {
+                        if (field.isAnnotationPresent(Qualifier.class) &&
+                                field.getAnnotation(Qualifier.class).value().equals(dependency.name())) {
+                            return true;
+                        }
+                        return field.getType().getName().equals(dependency.name());
+                    })
+                    .findAny();
+            if (beanDefinition.isPresent()) {
+                field.setAccessible(true);
+                field.set(beanInstance, Objects.requireNonNull(beanDefinition.get().instance()));
+            }
+        } catch (IllegalAccessException e) {
+            throw new BeanInstanceCreationException(String.format("'%s' bean can't be instantiated", name), e);
+        }
     }
 }

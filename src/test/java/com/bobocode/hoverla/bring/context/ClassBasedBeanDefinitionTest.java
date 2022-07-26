@@ -19,17 +19,17 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Method name() returns default bean name")
-    void testName_ReturnDefaultBeanName() {
+    void returnDefaultBeanName() {
         // when
         final ClassBasedBeanDefinition beanDefinition = new ClassBasedBeanDefinition(ClassBasedBeanDefinitionNoName.class);
 
         // then
-        assertThat(beanDefinition).hasName(ClassBasedBeanDefinitionNoName.class.getSimpleName());
+        assertThat(beanDefinition).hasName(ClassBasedBeanDefinitionNoName.class.getName());
     }
 
     @Test
     @DisplayName("Method name() returns provided bean name")
-    void testName_ReturnNameProvided() {
+    void returnNameProvided() {
         // when
         final ClassBasedBeanDefinition beanDefinition = new ClassBasedBeanDefinition(ClassBasedBeanDefinitionWithName.class);
 
@@ -51,7 +51,7 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Return correct bean type")
-    void testType() {
+    void returnType() {
         // when
         final ClassBasedBeanDefinition beanDefinition = new ClassBasedBeanDefinition(ClassBasedBeanDefinitionWithName.class);
 
@@ -61,9 +61,10 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Return correct bean dependencies")
-    void testDependencies() {
+    void returnTestDependencies() {
         // given
-        final Map<String, Class<?>> beanDependencies = Map.of(ClassBasedBeanDefinitionNoName.class.getSimpleName(), ClassBasedBeanDefinitionNoName.class,
+        String CLASS_BASED_BEAN_DEFINITION_ON_NAME = "classBasedBeanDefinitionNoName";
+        final Map<String, Class<?>> beanDependencies = Map.of(CLASS_BASED_BEAN_DEFINITION_ON_NAME, ClassBasedBeanDefinitionNoName.class,
                 ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME, ClassBasedBeanDefinitionWithName.class);
 
         // when
@@ -76,7 +77,7 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Create instance of a bean without dependencies")
-    void testInstance_ReturnBeanWithNoDependencies() {
+    void returnBeanWithNoDependencies() {
         // given
         final ClassBasedBeanDefinition beanDefinition =
                 new ClassBasedBeanDefinition(ClassBasedBeanDefinitionNoDependencies.class);
@@ -87,12 +88,11 @@ class ClassBasedBeanDefinitionTest {
         // then
         assertNotNull(instance);
         assertEquals(ClassBasedBeanDefinitionNoDependencies.class, instance.getClass());
-        assertEquals(new ClassBasedBeanDefinitionNoDependencies(), instance);
     }
 
     @Test
     @DisplayName("Create instance of a bean with constructor injection")
-    void testInstance_ReturnBeanWithConstructorInjection() {
+    void returnBeanWithConstructorInjection() {
         // given
         final ClassBasedBeanDefinition beanDefinition =
                 new ClassBasedBeanDefinition(ClassBasedBeanDefinitionConstructorInjection.class);
@@ -105,8 +105,8 @@ class ClassBasedBeanDefinitionTest {
         final ClassBasedBeanDefinition dependency1 = mock(ClassBasedBeanDefinition.class);
         final ClassBasedBeanDefinition dependency2 = mock(ClassBasedBeanDefinition.class);
 
-        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
-        when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.class.getSimpleName());
+        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getName());
+        when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.class.getName());
 
         when(dependency1.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoName.class);
         when(dependency2.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionWithName.class);
@@ -119,7 +119,7 @@ class ClassBasedBeanDefinitionTest {
 
         // then
         assertNotNull(instance);
-        assertEquals(expectedBean, instance);
+        assertEquals(expectedBean.getClass(), instance.getClass());
 
         verify(dependency1).instance(any());
         verify(dependency2).instance(any());
@@ -127,7 +127,7 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Create instance of a bean with field injection")
-    void testInstance_ReturnBeanWithFieldInjection() {
+    void returnBeanWithFieldInjection() {
         // given
         final ClassBasedBeanDefinition beanDefinition =
                 new ClassBasedBeanDefinition(ClassBasedBeanDefinitionFieldInjection.class);
@@ -143,7 +143,7 @@ class ClassBasedBeanDefinitionTest {
         final ClassBasedBeanDefinition dependency1 = mock(ClassBasedBeanDefinition.class);
         final ClassBasedBeanDefinition dependency2 = mock(ClassBasedBeanDefinition.class);
 
-        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
+        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getName());
         when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME);
 
         when(dependency1.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoName.class);
@@ -157,7 +157,7 @@ class ClassBasedBeanDefinitionTest {
 
         // then
         assertNotNull(instance);
-        assertEquals(expectedBean, instance);
+        assertEquals(expectedBean.getClass(), instance.getClass());
 
         verify(dependency1).instance(any());
         verify(dependency2).instance(any());
@@ -165,7 +165,7 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Create instance of a bean with constructor and field injection")
-    void testInstance_ReturnBeanWithConstructorAndFieldInjection() {
+    void returnBeanWithConstructorAndFieldInjection() {
         // given
         final ClassBasedBeanDefinition beanDefinition =
                 new ClassBasedBeanDefinition(ClassBasedBeanDefinitionConstructorFieldInjection.class);
@@ -181,9 +181,9 @@ class ClassBasedBeanDefinitionTest {
         final ClassBasedBeanDefinition dependency2 = mock(ClassBasedBeanDefinition.class);
         final ClassBasedBeanDefinition dependency3 = mock(ClassBasedBeanDefinition.class);
 
-        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
+        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getName());
         when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME);
-        when(dependency3.name()).thenReturn(ClassBasedBeanDefinitionNoDependencies.class.getSimpleName());
+        when(dependency3.name()).thenReturn(ClassBasedBeanDefinitionNoDependencies.class.getName());
 
         when(dependency1.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoName.class);
         when(dependency2.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionWithName.class);
@@ -198,7 +198,7 @@ class ClassBasedBeanDefinitionTest {
 
         // then
         assertNotNull(instance);
-        assertEquals(expectedBean, instance);
+        assertEquals(expectedBean.getClass(), instance.getClass());
 
         verify(dependency1).instance(any());
         verify(dependency2).instance(any());
@@ -207,7 +207,7 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Create bean instance. Dependencies return null. Throws BeanInstanceCreationException")
-    void testInstance_ThrowBeanInstanceCreationException() {
+    void throwBeanInstanceCreationExceptionWhenDependenciesAreNull() {
         // given
         final String expectedMessage = "'%s' bean can't be instantiated".formatted(ClassBasedBeanDefinitionFieldInjection.class.getSimpleName());
         final ClassBasedBeanDefinition beanDefinition =
@@ -216,7 +216,7 @@ class ClassBasedBeanDefinitionTest {
         final ClassBasedBeanDefinition dependency1 = mock(ClassBasedBeanDefinition.class);
         final ClassBasedBeanDefinition dependency2 = mock(ClassBasedBeanDefinition.class);
 
-        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
+        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getName());
         when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME);
 
         when(dependency1.instance()).thenReturn(null);
@@ -231,7 +231,7 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Create bean instance. Parameters are nulls. Throws BeanInstanceCreationException")
-    void testInstance_NullParameter_ThrowBeanInstanceCreationException() {
+    void throwBeanInstanceCreationExceptionWhenParameterAreNull() {
         // given
         final String expectedMessage = "'%s' bean can't be instantiated".formatted(ClassBasedBeanDefinitionFieldInjection.class.getSimpleName());
         final ClassBasedBeanDefinition beanDefinition =
@@ -255,7 +255,7 @@ class ClassBasedBeanDefinitionTest {
 
     @Test
     @DisplayName("Create instance of a bean with confusing dependencies")
-    void testInstance_ReturnBeanWithConfusingDependencies() {
+    void returnBeanWithConfusingDependencies() {
         // given
         final ClassBasedBeanDefinition beanDefinition =
                 new ClassBasedBeanDefinition(ClassBasedBeanDefinitionConfusingDependencies.class);
@@ -271,9 +271,9 @@ class ClassBasedBeanDefinitionTest {
         final ClassBasedBeanDefinition dependency2 = mock(ClassBasedBeanDefinition.class);
         final ClassBasedBeanDefinition dependency3 = mock(ClassBasedBeanDefinition.class);
 
-        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getSimpleName());
+        when(dependency1.name()).thenReturn(ClassBasedBeanDefinitionNoName.class.getName());
         when(dependency2.name()).thenReturn(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME);
-        when(dependency3.name()).thenReturn(ClassBasedBeanDefinitionNoDependencies.class.getSimpleName());
+        when(dependency3.name()).thenReturn(ClassBasedBeanDefinitionNoDependencies.class.getName());
 
         when(dependency1.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionNoName.class);
         when(dependency2.type()).thenAnswer(invocationOnMock -> ClassBasedBeanDefinitionWithName.class);
@@ -288,7 +288,7 @@ class ClassBasedBeanDefinitionTest {
 
         // then
         assertNotNull(instance);
-        assertEquals(expectedBean, instance);
+        assertEquals(expectedBean.getClass(), instance.getClass());
 
         verify(dependency1).instance(any());
         verify(dependency2, times(2)).instance(any());

@@ -4,6 +4,5 @@ import com.bobocode.hoverla.bring.annotation.Bean;
 import lombok.EqualsAndHashCode;
 
 @Bean
-@EqualsAndHashCode
 public class ClassBasedBeanDefinitionNoName {
 }

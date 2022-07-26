@@ -10,7 +10,6 @@ import lombok.Setter;
 @Bean
 @Getter
 @Setter
-@EqualsAndHashCode
 public class ClassBasedBeanDefinitionConstructorFieldInjection {
 
     @Inject
