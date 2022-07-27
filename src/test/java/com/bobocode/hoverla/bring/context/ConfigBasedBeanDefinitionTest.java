@@ -3,8 +3,8 @@ package com.bobocode.hoverla.bring.context;
 import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.bobocode.hoverla.bring.helper.BeanDefinitionAssert;
-import com.bobocode.hoverla.bring.testsubject.NotMarkedTestConfig;
-import com.bobocode.hoverla.bring.testsubject.TestBeanConfig;
+import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfigWithoutAnnotation;
+import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfig;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -94,7 +94,7 @@ class ConfigBasedBeanDefinitionTest {
     @Test
     @DisplayName("Fails on configuration class not marked as @Configuration")
     void configurationClassWithNoAnnotation() throws NoSuchMethodException {
-        NotMarkedTestConfig configInstance = new NotMarkedTestConfig();
+        TestBeanConfigWithoutAnnotation configInstance = new TestBeanConfigWithoutAnnotation();
         Method method = configInstance.getClass().getMethod("bean");
 
         Assertions.assertThatThrownBy(() -> new ConfigBasedBeanDefinition(configInstance, method))

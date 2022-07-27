@@ -5,7 +5,12 @@ import com.bobocode.hoverla.bring.exception.BeanAlreadyExistsException;
 
 /**
  * Represents API to work with IoC container, provides read and write operations.
- * Class for registration are not supposed and not forced to be marked as {@link Bean} initially
+ *
+ * <p>Classes for registration are not supposed and not forced to be marked as {@link Bean} initially.</p>
+ *
+ * @see Bean
+ * @see BeanFactory
+ * @see BeanDefinition
  */
 public interface ApplicationContext extends BeanFactory {
 

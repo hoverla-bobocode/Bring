@@ -3,9 +3,13 @@ package com.bobocode.hoverla.bring.context;
 import java.util.Map;
 
 /**
- * Wraps all necessary bean information, encapsulates bean creation logic (this logic can be seperated in future)
+ * Describes a bean instance, which has name, type, dependencies and further information supplied by
+ * concrete implementations.
+ *
+ * @see ConfigBasedBeanDefinition
  */
 public interface BeanDefinition {
+
     /**
      * Returns bean name
      * @return bean name
@@ -27,8 +31,9 @@ public interface BeanDefinition {
 
     /**
      * Instantiates bean using all necessary information encapsulated within.
-     * Requires bean definition which are treated as dependencies to be passed as arguments.
-     * If arguments don't match the actual required dependencies, the exception will be thrown.
+     *
+     * <p>Requires bean definition which are treated as dependencies to be passed as arguments.</p>
+     * <p>If arguments don't match the actual required dependencies, the exception will be thrown.</p>
      *
      * @param dependencies bean definitions that are treated as required dependencies for this bean instantiation
      * @return bean instance

@@ -17,8 +17,14 @@ import java.util.Objects;
 import static java.util.stream.Collectors.toMap;
 
 /**
- * Java Configuration-based bean definition. Requires instance of class marked with {@link Configuration} instance
- * and method withing it marked with {@link Bean} that represents this bean initialization point.
+ * Java Configuration-based bean definition.
+ *
+ * <p>Requires instance of a class marked with {@link Configuration @Configuration} annotation
+ * and method marked with {@link Bean @Bean} annotation that represents this bean initialization point.</p>
+ *
+ * @see Bean @Bean
+ * @see Configuration @Configuration
+ * @see BeanDefinition
  */
 @Slf4j
 public class ConfigBasedBeanDefinition implements BeanDefinition {
