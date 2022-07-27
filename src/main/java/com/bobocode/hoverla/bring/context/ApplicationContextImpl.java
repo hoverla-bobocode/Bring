@@ -17,6 +17,7 @@ import static org.apache.commons.lang3.StringUtils.containsNone;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Slf4j
+public
 class ApplicationContextImpl implements ApplicationContext {
 
     private static final String BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE = "The argument [beanType] must be not null";
