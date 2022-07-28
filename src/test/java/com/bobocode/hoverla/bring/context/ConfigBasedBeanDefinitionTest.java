@@ -1,9 +1,7 @@
 package com.bobocode.hoverla.bring.context;
 
-import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.bobocode.hoverla.bring.helper.BeanDefinitionAssert;
-import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfigWithoutAnnotation;
 import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfig;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +11,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Method;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,7 +35,7 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasName(methodName);
+                .hasName(methodName);
     }
 
     @Test
@@ -45,7 +46,7 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasName("beanName");
+                .hasName("beanName");
     }
 
     @Test
@@ -56,7 +57,7 @@ class ConfigBasedBeanDefinitionTest {
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasType(String.class);
+                .hasType(String.class);
     }
 
     @Test
@@ -66,50 +67,29 @@ class ConfigBasedBeanDefinitionTest {
         Method method = testBeanConfig.getClass().getMethod(methodName, int.class, String.class);
 
         BeanDefinition firstDependency = mock(BeanDefinition.class);
-        when(firstDependency.instance()).thenReturn(1);
+        when(firstDependency.getInstance()).thenReturn(1);
         BeanDefinition secondDependency = mock(BeanDefinition.class);
-        when(secondDependency.instance()).thenReturn("string");
+        when(secondDependency.getInstance()).thenReturn("string");
         Map<String, Class<?>> dependencies = Map.of("num", int.class, "testParamName", String.class);
 
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasDependencies(dependencies);
+                .hasDependencies(dependencies);
     }
 
     @Test
-    @DisplayName("Fails on missed dependencies passed when instance() is called")
+    @DisplayName("Fails on missed dependencies passed when instantiate() is called")
     void beanWithMissedDependencies() throws NoSuchMethodException {
         String methodName = "beanWithDependencies";
         Method method = testBeanConfig.getClass().getMethod(methodName, int.class, String.class);
 
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
-        Assertions.assertThatThrownBy(beanDefinition::instance)
-                  .isInstanceOf(BeanInstanceCreationException.class)
-                  .hasMessageContaining("'beanWithDependencies' bean can't be instantiated")
-                  .hasStackTraceContaining("wrong number of arguments");
-    }
-
-    @Test
-    @DisplayName("Fails on configuration class not marked as @Configuration")
-    void configurationClassWithNoAnnotation() throws NoSuchMethodException {
-        TestBeanConfigWithoutAnnotation configInstance = new TestBeanConfigWithoutAnnotation();
-        Method method = configInstance.getClass().getMethod("bean");
-
-        Assertions.assertThatThrownBy(() -> new ConfigBasedBeanDefinition(configInstance, method))
-                  .isInstanceOf(BeanDefinitionConstructionException.class)
-                  .hasMessageContaining("Configuration class instance passed is not marked as @Configuration");
-    }
-
-    @Test
-    @DisplayName("Fails on method not marked as @Bean")
-    void methodNotMarkedAsBean() throws NoSuchMethodException {
-        Method method = testBeanConfig.getClass().getMethod("notBeanMethod");
-
-        Assertions.assertThatThrownBy(() -> new ConfigBasedBeanDefinition(testBeanConfig, method))
-                  .isInstanceOf(BeanDefinitionConstructionException.class)
-                  .hasMessageContaining("Configuration method to create bean is not marked as @Bean");
+        Assertions.assertThatThrownBy(beanDefinition::instantiate)
+                .isInstanceOf(BeanInstanceCreationException.class)
+                .hasMessageContaining("'beanWithDependencies' bean can't be instantiated")
+                .hasStackTraceContaining("bean has no dependency that matches parameter");
     }
 
     @Test
@@ -119,19 +99,53 @@ class ConfigBasedBeanDefinitionTest {
 
         ConfigBasedBeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
-        // Has no instance before calling instance()
+        // Has no instance before calling instantiate()
         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasFieldOrPropertyWithValue("instance", null);
+                .hasFieldOrPropertyWithValue("instance", null);
 
-        Object instance = beanDefinition.instance();
+        beanDefinition.instantiate();
 
-        // Has an instance after calling instance()
-         BeanDefinitionAssert.assertThat(beanDefinition)
-                            .hasFieldOrPropertyWithValue("instance", instance);
+        // Has an instance after calling instantiate()
+        Object instance = beanDefinition.getInstance();
+        BeanDefinitionAssert.assertThat(beanDefinition)
+                .hasFieldOrPropertyWithValue("instance", instance);
 
-        Object cachedInstance = beanDefinition.instance();
+        Object existingInstance = beanDefinition.getInstance();
 
-        // Further instance() calls return the same object in memory
-        Assertions.assertThat(cachedInstance).isSameAs(instance);
+        // Further getInstance() calls return the same object in memory
+        assertThat(existingInstance).isSameAs(instance);
+    }
+
+    @Test
+    void beanConstructorWithCorrectArgumentsOrder() throws NoSuchMethodException {
+        Method method = testBeanConfig.getClass().getMethod("beanWithDependencies", byte.class, String.class, String.class);
+
+        BeanDefinition firstDependency = mock(BeanDefinition.class);
+        when(firstDependency.getInstance()).thenReturn((byte) 1);
+        when(firstDependency.name()).thenReturn("num");
+        doReturn(byte.class).when(firstDependency).type();
+
+        BeanDefinition secondDependency = mock(BeanDefinition.class);
+        when(secondDependency.getInstance()).thenReturn("string");
+        when(secondDependency.name()).thenReturn("testParam");
+        doReturn(String.class).when(secondDependency).type();
+
+        BeanDefinition thirdDependency = mock(BeanDefinition.class);
+        when(thirdDependency.getInstance()).thenReturn("anotherString");
+        when(thirdDependency.name()).thenReturn("anotherValue");
+        doReturn(String.class).when(thirdDependency).type();
+
+        ConfigBasedBeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
+
+        // dependencies are shuffled - should still invoke method with correct order
+        assertThatNoException()
+                .isThrownBy(() -> beanDefinition.instantiate(thirdDependency, secondDependency, firstDependency));
+
+        Object instance = beanDefinition.getInstance();
+
+        assertThat(instance)
+                .isNotNull()
+                .isInstanceOf(Byte.class)
+                .isEqualTo((byte) 0);
     }
 }
