@@ -17,7 +17,8 @@ class BringApplicationTest {
     @Test
     void throwsExceptionPackageToScanIsEmpty() {
         String exceptionMessage = "Argument [packagesToScan] must contain at least one element";
-        assertThatThrownBy(() -> BringApplication.getContextBuilder().build())
+        var builder =  BringApplication.getContextBuilder();
+        assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(exceptionMessage);
 

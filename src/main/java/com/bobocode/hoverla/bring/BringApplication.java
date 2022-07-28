@@ -38,6 +38,9 @@ import java.util.List;
  * package names or user class that is in package which should be scanned.
  */
 public class BringApplication {
+    private BringApplication() {
+    }
+
     /**
      * Initializes and returns {@link ApplicationContext}
      * @param packagesToScan list of packages to scan
@@ -65,7 +68,7 @@ public class BringApplication {
         if (packagesToScan == null || packagesToScan.length == 0) {
             throw new IllegalArgumentException("Argument [packagesToScan] must contain at least one element");
         }
-        // todo: add initialization of scanners;
+        // TODO: add initialization of scanners;
         List<BeanScanner> scanners = List.of();
 
         return new ApplicationContextImpl(scanners, new BeanDefinitionValidator(), new BeanInitializer());
