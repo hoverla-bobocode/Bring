@@ -5,67 +5,41 @@ import ch.qos.logback.classic.Logger;
 import com.bobocode.hoverla.bring.context.ApplicationContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.stream.Stream;
+
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BringApplicationTest {
-    private final String PACKAGE = "com.bobocode.hoverla.bring";
+    private final String EXCEPTION_MESSAGE = "Argument [packagesToScan] must contain at least one not null and not empty element";
 
-    @DisplayName("Throws IllegalArgumentException: no packages were provided")
-    @Test
-    void throwsExceptionPackageToScanIsEmpty() {
-        String exceptionMessage = "Argument [packagesToScan] must contain at least one element";
-        var builder =  BringApplication.getContextBuilder();
-        assertThatThrownBy(builder::build)
+    @ParameterizedTest(name = "Throws exception when null or empty package name was provided")
+    @NullAndEmptySource
+    void throwsExceptionWhenNullOrEmptyPackages(String packageName) {
+         assertThatThrownBy(() -> BringApplication.loadContext(packageName))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(exceptionMessage);
-
-        assertThatThrownBy(BringApplication::loadContext)
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(exceptionMessage);
+                .hasMessageContaining(EXCEPTION_MESSAGE);
     }
 
-    @DisplayName("No exception was thrown when class was provided")
+    @DisplayName("Throws exception when no package was provided")
     @Test
-    void provideUserClassOnly() {
-        assertThatNoException().isThrownBy(() -> BringApplication.loadContext(this.getClass()));
-
-        assertThatNoException().isThrownBy(() -> BringApplication.getContextBuilder()
-                .classToScan(this.getClass())
-                .build());
+    void throwsExceptionWhenNoPackages() {
+        assertThatThrownBy(BringApplication::loadContext)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(EXCEPTION_MESSAGE);
     }
 
     @DisplayName("No exception was thrown when packages to scan were provided")
     @Test
     void providePackagesToScan() {
-        assertThatNoException().isThrownBy(() -> BringApplication.loadContext(PACKAGE));
-
-        assertThatNoException().isThrownBy(() -> BringApplication.getContextBuilder()
-                .packagesToScan(PACKAGE)
-                .build());
+        assertThatNoException().isThrownBy(() -> BringApplication.loadContext("com.bobocode.hoverla.bring"));
     }
 
-    @DisplayName("No exception was thrown when both packages and user class were provided")
-    @Test
-    void providePackagesToScanAndUserClass() {
-        assertThatNoException().isThrownBy(() -> BringApplication.getContextBuilder()
-                .packagesToScan(PACKAGE)
-                .classToScan(this.getClass())
-                .build());
-    }
-
-    @DisplayName("Log level DEBUG is set")
-    @Test
-    void setLogLevel() {
-        ApplicationContext context = BringApplication.getContextBuilder()
-                .packagesToScan(PACKAGE)
-                .logLevel(Level.DEBUG)
-                .build();
-
-        Logger logger = (Logger) org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-        assertThat(logger.getLevel()).isEqualTo(Level.DEBUG);
-
-    }
 }

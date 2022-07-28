@@ -7,9 +7,10 @@ import com.bobocode.hoverla.bring.context.ApplicationContextImpl;
 import com.bobocode.hoverla.bring.context.BeanDefinitionValidator;
 import com.bobocode.hoverla.bring.context.BeanInitializer;
 import com.bobocode.hoverla.bring.context.BeanScanner;
+import com.google.common.base.Strings;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -19,8 +20,8 @@ import java.util.List;
  *
  * Usage:
  * {@code
- *     ApplicationContext = BringApplication.loadContext("com.bobocode.hoverla.bring");
- *     String bean = ApplicationContext.getBean("bean_name", String.class);
+ *     ApplicationContext context = BringApplication.loadContext("com.bobocode.hoverla.bring");
+ *     String bean = context.getBean("bean_name", String.class);
  * }
  * </pre>
  * <p>
@@ -34,8 +35,7 @@ import java.util.List;
  *      String bean = context.getBean("BeanName");
  * }
  *
- * It is necessary to provide packages will be scan to define bean definition configs. User can pass either
- * package names or user class that is in package which should be scanned.
+ * It is necessary to provide packages to be scanned to define bean definition configs.
  */
 public class BringApplication {
     private BringApplication() {
@@ -43,35 +43,42 @@ public class BringApplication {
 
     /**
      * Initializes and returns {@link ApplicationContext}
-     * @param packagesToScan list of packages to scan
+     * @param packagesToScan packages to scan
      */
     public static ApplicationContext loadContext(String... packagesToScan) {
         return getContext(packagesToScan);
     }
 
     /**
-     * Initializes and returns {@link ApplicationContext}
-     * @param clazz particular user class that is in the package which is candidate for scanning
-     */
-    public static ApplicationContext loadContext(Class<?> clazz) {
-        return getContext(clazz.getPackageName());
-    }
-
-    /**
      * Initializes input parameters (list of {@link BeanScanner}, {@link BeanDefinitionValidator}, {@link BeanInitializer})
      * for ApplicationContext creation and return instance of context
      *
-     * @param packagesToScan list of packages for scanning to define bean configs
+     * @param packagesToScan packages for scanning to define bean configs
      * @return instance of {@link ApplicationContextImpl}
      */
     private static ApplicationContext getContext(String... packagesToScan)  {
-        if (packagesToScan == null || packagesToScan.length == 0) {
-            throw new IllegalArgumentException("Argument [packagesToScan] must contain at least one element");
-        }
+        // TODO: use this variable for scanners
+        String[] validatedPackages = validatePackagesToScan(packagesToScan);
         // TODO: add initialization of scanners;
         List<BeanScanner> scanners = List.of();
 
         return new ApplicationContextImpl(scanners, new BeanDefinitionValidator(), new BeanInitializer());
+    }
+
+    private static String[] validatePackagesToScan(String... packagesToScan) {
+        String message = "Argument [packagesToScan] must contain at least one not null and not empty element";
+        if (packagesToScan == null || packagesToScan.length == 0) {
+            throw new IllegalArgumentException(message);
+        }
+
+        String[] filteredPackages = Arrays.stream(packagesToScan)
+                .filter(p -> !Strings.isNullOrEmpty(p))
+                .toArray(String[]::new);
+        if (filteredPackages.length == 0) {
+            throw new IllegalArgumentException(message);
+        } else {
+            return filteredPackages;
+        }
     }
 
 
@@ -79,7 +86,7 @@ public class BringApplication {
      * Creates instance of ApplicationContextBuilder class
      * @return ApplicationContextBuilder instance
      */
-    static ApplicationContextBuilder getContextBuilder() {
+    public static ApplicationContextBuilder getContextBuilder() {
         return new ApplicationContextBuilder();
     }
 
@@ -89,7 +96,6 @@ public class BringApplication {
     static class ApplicationContextBuilder {
         private Level logLevel;
         private String[] packagesToScan;
-        private Class<?> classToScan;
 
         public ApplicationContextBuilder logLevel(Level logLevel) {
             this.logLevel = logLevel;
@@ -101,30 +107,13 @@ public class BringApplication {
             return this;
         }
 
-        public ApplicationContextBuilder classToScan(Class<?> classToScan){
-            this.classToScan = classToScan;
-            return this;
-        }
-
+        @SuppressWarnings(value = "see https://rules.sonarsource.com/java/RSPEC-4792")
         public ApplicationContext build() {
             Logger logger = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
             logger.setLevel(logLevel != null ? logLevel : Level.INFO);
 
-            return getContext(addClassPackageIntoPackagesToScan());
+            return getContext(packagesToScan);
         }
-
-        private String[] addClassPackageIntoPackagesToScan() {
-            if (classToScan != null) {
-                if (packagesToScan != null && packagesToScan.length != 0) {
-                    List<String> packages = new ArrayList<>(List.of(this.packagesToScan));
-                    packages.add(classToScan.getPackageName());
-                    return packages.toArray(new String[packages.size()]);
-                }
-                return new String[]{classToScan.getPackageName()};
-            }
-            return packagesToScan;
-        }
-
 
     }
 
