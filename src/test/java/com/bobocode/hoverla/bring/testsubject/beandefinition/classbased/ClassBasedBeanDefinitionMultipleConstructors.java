@@ -2,7 +2,6 @@ package com.bobocode.hoverla.bring.testsubject.beandefinition.classbased;
 
 import com.bobocode.hoverla.bring.annotation.Bean;
 import com.bobocode.hoverla.bring.annotation.Inject;
-import lombok.EqualsAndHashCode;
 
 @Bean
 public class ClassBasedBeanDefinitionMultipleConstructors {
@@ -14,6 +13,7 @@ public class ClassBasedBeanDefinitionMultipleConstructors {
 
     private final ClassBasedBeanDefinitionNoDependencies classBasedBeanDefinitionNoDependencies;
 
+    @Inject
     public ClassBasedBeanDefinitionMultipleConstructors(
             ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName,
             ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName,

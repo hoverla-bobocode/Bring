@@ -3,7 +3,6 @@ package com.bobocode.hoverla.bring.testsubject.beandefinition.classbased;
 import com.bobocode.hoverla.bring.annotation.Bean;
 import com.bobocode.hoverla.bring.annotation.Inject;
 import com.bobocode.hoverla.bring.annotation.Qualifier;
-import lombok.EqualsAndHashCode;
 import lombok.Setter;
 
 @Bean
@@ -14,6 +13,6 @@ public class ClassBasedBeanDefinitionFieldInjection {
     private ClassBasedBeanDefinitionNoName classBasedBeanDefinitionNoName;
 
     @Inject
-    @Qualifier(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME)
+    //@Qualifier(ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME)
     private ClassBasedBeanDefinitionWithName classBasedBeanDefinitionWithName;
 }
