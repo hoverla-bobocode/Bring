@@ -10,10 +10,14 @@ import org.mockito.ArgumentCaptor;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,7 +60,7 @@ class BeanInitializerTest {
         for (BeanDefinition beanDefinition : beanDefinitionTable.values()) {
             ArgumentCaptor<BeanDefinition> definitionCaptor = ArgumentCaptor.forClass(BeanDefinition.class);
 
-            verify(beanDefinition).instance(definitionCaptor.capture());
+            verify(beanDefinition, times(1)).instantiate(definitionCaptor.capture());
 
             BeanDefinition[] expectedDependencies = expectedInvocationArgs.get(beanDefinition);
             List<BeanDefinition> actualDependencies = definitionCaptor.getAllValues();
@@ -76,6 +80,11 @@ class BeanInitializerTest {
             dependencies.put(name, BeanDefinition.class);
         }
         when(beanDefinition.dependencies()).thenReturn(dependencies);
+
+        // isInstantiated() method of BeanDefinition should return true only when instantiate(...) method was called.
+        // To mock such behavior we basically say: "when instantiate -> then isInstantiated() should return true"
+        Supplier<?> instantiateAnswerSupplier = () -> when(beanDefinition.isInstantiated()).thenReturn(true);
+        doAnswer(ignore -> instantiateAnswerSupplier.get()).when(beanDefinition).instantiate(any());
 
         return beanDefinition;
     }

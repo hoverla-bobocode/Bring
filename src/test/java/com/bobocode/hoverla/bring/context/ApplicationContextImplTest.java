@@ -53,15 +53,15 @@ class ApplicationContextImplTest {
 
         when(beanDefinitionStringOne.name()).thenReturn("String");
         doReturn(String.class).when(beanDefinitionStringOne).type();
-        when(beanDefinitionStringOne.instance()).thenReturn("String bean");
+        when(beanDefinitionStringOne.getInstance()).thenReturn("String bean");
 
         when(beanDefinitionInteger.name()).thenReturn("Integer");
         doReturn(Integer.class).when(beanDefinitionInteger).type();
-        when(beanDefinitionInteger.instance()).thenReturn(2);
+        when(beanDefinitionInteger.getInstance()).thenReturn(2);
 
         when(beanDefinitionStringTwo.name()).thenReturn("One more string bean");
         doReturn(String.class).when(beanDefinitionStringTwo).type();
-        when(beanDefinitionStringTwo.instance()).thenReturn("String bean");
+        when(beanDefinitionStringTwo.getInstance()).thenReturn("String bean");
 
         applicationContext = new ApplicationContextImpl(beanScannerList, validator, initializer);
     }

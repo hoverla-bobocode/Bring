@@ -53,42 +53,92 @@ public class ConfigBasedBeanDefinition implements BeanDefinition {
         this.configInstance = configInstance;
         this.beanMethod = beanMethod;
 
-        this.name = getName(beanMethod);
+        this.name = resolveName(beanMethod);
         log.trace("Bean name is '{}'", name);
 
         this.type = getType(beanMethod);
         log.trace("'{}' bean type is '{}'", name, type);
 
-        this.dependencies = getDependencies(beanMethod);
+        this.dependencies = resolveDependencies(beanMethod);
         log.trace("'{}' bean dependencies are {}", name, dependencies);
     }
 
-    private static void validate(Object configInstance, Method method) {
+    private void validate(Object configInstance, Method method) {
         log.debug("Validating arguments passed to create ConfigBased");
         Objects.requireNonNull(configInstance, "Configuration class instance is null");
         Objects.requireNonNull(method, "Configuration method to create bean is null");
-
-        checkClassMarkedAsConfig(configInstance);
-        checkMethodMarkedAsBean(method);
     }
 
-    private static void checkClassMarkedAsConfig(Object configInstance) {
-        if (!configInstance.getClass().isAnnotationPresent(Configuration.class)) {
-            throw new BeanDefinitionConstructionException(
-                    "Configuration class instance passed is not marked as @%s".formatted(Configuration.class.getSimpleName())
-            );
+    /**
+     * See {@link BeanDefinition#name()}.
+     * <p>This name is either equal to target bean method name or to name specified in {@link Bean} annotation.</p>
+     *
+     * @return name of current {@link BeanDefinition}.
+     */
+    @Override
+    public String name() {
+        return name;
+    }
+
+    /**
+     * See {@link BeanDefinition#type()}
+     * <p>Type is taken from target bean method return type.</p>
+     *
+     * @return type of current {@link BeanDefinition}.
+     */
+    @Override
+    public Class<?> type() {
+        return type;
+    }
+
+    /**
+     * See {@link BeanDefinition#dependencies()}.
+     * <p>Keys are taken from target bean method parameter names.</p>
+     * <p>Values are taken from target bean method parameter types.</p>
+     *
+     * @return map of names and types of dependent {@link BeanDefinition}s.
+     */
+    @Override
+    public Map<String, Class<?>> dependencies() {
+        return dependencies;
+    }
+
+    /**
+     * See {@link BeanDefinition#isInstantiated()}
+     *
+     * @return {@code true} if current {@link ConfigBasedBeanDefinition#instance} is not null, {@code false} otherwise.
+     */
+    @Override
+    public boolean isInstantiated() {
+        return Objects.nonNull(instance);
+    }
+
+    /**
+     * See {@link BeanDefinition#instantiate(BeanDefinition...)}
+     *
+     * @param dependencies {@link BeanDefinition} objects that are treated as required dependencies for
+     *                     instantiating a bean from current {@link BeanDefinition}
+     */
+    @Override
+    public void instantiate(BeanDefinition... dependencies) {
+        if (!isInstantiated()) {
+            log.debug("Creating new instance of bean '{}'", name);
+            instance = createInstance(dependencies);
         }
     }
 
-    private static void checkMethodMarkedAsBean(Method method) {
-        if (!method.isAnnotationPresent(Bean.class)) {
-            throw new BeanDefinitionConstructionException(
-                    "Configuration method to create bean is not marked as @%s".formatted(Bean.class.getSimpleName())
-            );
-        }
+    /**
+     * See {@link BeanDefinition#getInstance()}.
+     *
+     * @return bean instance of current {@link BeanDefinition}.
+     * @throws NullPointerException when {@link ConfigBasedBeanDefinition#instance} is null.
+     */
+    @Override
+    public Object getInstance() {
+        return Objects.requireNonNull(instance, "Instance of %s has not been created yet".formatted(name));
     }
 
-    private static String getName(Method beanMethod) {
+    private String resolveName(Method beanMethod) {
         Bean annotation = beanMethod.getAnnotation(Bean.class);
         String beanName = annotation.name();
         if (beanName.isEmpty()) {
@@ -97,76 +147,47 @@ public class ConfigBasedBeanDefinition implements BeanDefinition {
         return beanName;
     }
 
-    private static Class<?> getType(Method beanMethod) {
+    private Class<?> getType(Method beanMethod) {
         return beanMethod.getReturnType();
     }
 
-    private static Map<String, Class<?>> getDependencies(Method beanMethod) {
+    private Map<String, Class<?>> resolveDependencies(Method beanMethod) {
         return Arrays.stream(beanMethod.getParameters())
-                     .collect(toMap(ConfigBasedBeanDefinition::getParameterName, Parameter::getType));
-    }
-
-    private static String getParameterName(Parameter parameter) {
-        if (parameter.isAnnotationPresent(Qualifier.class)) {
-            return parameter.getAnnotation(Qualifier.class).value();
-        }
-        return parameter.getName();
-    }
-
-    /**
-     * @return name of bean which is either equals to target bean method name
-     * or to name specified in {@link Bean} annotation
-     */
-    @Override
-    public String name() {
-        return name;
-    }
-
-    /**
-     * @return target bean method return type
-     */
-    @Override
-    public Class<?> type() {
-        return type;
-    }
-
-    /**
-     * @return dependencies map where keys are target bean method parameters name, and
-     * values are parameters types
-     */
-    @Override
-    public Map<String, Class<?>> dependencies() {
-        return dependencies;
-    }
-
-    /**
-     * Lazily initializes bean on the first call. After it happened further calls return a cached instance.
-     */
-    @Override
-    public Object instance(BeanDefinition... dependencies) {
-        if (instance != null) {
-            log.debug("Getting existing '{}' bean instance", name);
-            return instance;
-        }
-        return createInstance(dependencies);
+                .collect(toMap(this::resolveParameterName, Parameter::getType));
     }
 
     private Object createInstance(BeanDefinition... dependencies) {
         try {
-            log.debug("Initializing '{}' bean instance", name);
-            instance = getInstance(dependencies);
+            Object createdInstance = doCreateInstance(dependencies);
             log.debug("'{}' bean was instantiated", name);
-            return instance;
-
+            return createdInstance;
         } catch (Exception e) {
             throw new BeanInstanceCreationException("'%s' bean can't be instantiated".formatted(name), e);
         }
     }
 
-    private Object getInstance(BeanDefinition... dependencies) throws InvocationTargetException, IllegalAccessException {
-        Object[] args = Arrays.stream(dependencies)
-                              .map(BeanDefinition::instance)
-                              .toArray();
+    private Object doCreateInstance(BeanDefinition... dependencies) throws InvocationTargetException, IllegalAccessException {
+        Object[] args = Arrays.stream(beanMethod.getParameters())
+                .map(parameter -> getBeanDefinitionByParameter(parameter, dependencies))
+                .map(BeanDefinition::getInstance)
+                .toArray();
+
         return beanMethod.invoke(configInstance, args);
+    }
+
+    private BeanDefinition getBeanDefinitionByParameter(Parameter parameter, BeanDefinition... dependencies) {
+        return Arrays.stream(dependencies)
+                .filter(bd -> parameter.getType().isAssignableFrom(bd.type()))
+                .filter(bd -> bd.name().equals(resolveParameterName(parameter)))
+                .findFirst()
+                .orElseThrow(() -> new BeanInstanceCreationException(
+                        "'%s' bean has no dependency that matches parameter `%s`".formatted(name, parameter.getName())));
+    }
+
+    private String resolveParameterName(Parameter parameter) {
+        if (parameter.isAnnotationPresent(Qualifier.class)) {
+            return parameter.getAnnotation(Qualifier.class).value();
+        }
+        return parameter.getName();
     }
 }
