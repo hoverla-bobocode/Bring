@@ -36,7 +36,7 @@ class ApplicationContextBuilderTest {
     @DisplayName("Throws exception when no packages were provided")
     @Test
     void throwsExceptionWhenNoPackagesToScan() {
-        var builder = getContextBuilder();
+        BringApplication.ApplicationContextBuilder builder = getContextBuilder();
         assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(EXCEPTION_MESSAGE);
