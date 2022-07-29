@@ -39,12 +39,12 @@ public class BeanConfigurationClassScanner implements BeanScanner {
      * Performs scan of classes annotated with {@link Configuration @Configuration}
      * from given {@link BeanConfigurationClassScanner#packagesToScan packages}.
      *
-     * <p>Scanned {@link Class} objects are then transferred to {@link BeanConfigurationClassScanner} for further validation process.</p>
+     * <p>Scanned {@link Class} objects are then transferred to {@link BeanConfigClassValidator validator} for further validation process.</p>
      * <p>{@link BeanDefinitionMapper} is used to map scanned {@link Class} objects to {@link BeanDefinition}.</p>
      *
      * @return {@link List} of {@link BeanDefinition} objects.
      * @see BeanDefinition
-     * @see BeanAnnotationClassValidator
+     * @see BeanConfigClassValidator
      * @see BeanDefinitionMapper
      */
     @Override

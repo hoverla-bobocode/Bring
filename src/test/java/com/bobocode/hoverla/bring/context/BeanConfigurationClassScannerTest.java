@@ -48,7 +48,7 @@ class BeanConfigurationClassScannerTest {
     @Test
     @DisplayName("Returns empty list when no package to scan is passed")
     void returnsEmptyListWhenNoPackageToScan() {
-        scanner = new BeanConfigurationClassScanner(validator, mapper, NO_CONFIG_PACKAGE_NAME);
+        scanner = new BeanConfigurationClassScanner(validator, mapper);
 
         List<BeanDefinition> beanDefinitions = scanner.scan();
 
