@@ -2,9 +2,9 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
-import com.bobocode.hoverla.bring.helper.BeanDefinitionAssert;
-import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfigWithoutAnnotation;
-import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfig;
+import com.bobocode.hoverla.bring.support.BeanDefinitionAssert;
+import com.bobocode.hoverla.bring.test.subject.config.TestBeanConfigWithoutAnnotation;
+import com.bobocode.hoverla.bring.test.subject.config.TestBeanConfig;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

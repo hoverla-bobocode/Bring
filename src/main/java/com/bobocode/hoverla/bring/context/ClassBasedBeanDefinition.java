@@ -153,22 +153,20 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
             this.instance = doCreateInstance(dependencies);
             log.debug("'{}' bean was instantiated", name);
             return instance;
-        } catch (Exception e) {
+        } catch (Exception e) { // all @SneakyThrows stuff is caught here
             throw new BeanInstanceCreationException(INSTANTIATION_EXCEPTION_MESSAGE.formatted(name), e);
         }
     }
 
+    @SneakyThrows
     private Object doCreateInstance(BeanDefinition... dependencies) {
-        try {
-            Object beanInstance = createInstanceUsingConstructor(dependencies);
-            injectionFields.forEach(field -> injectFieldDependencies(beanInstance, field, dependencies));
-            return beanInstance;
-        } catch (Exception e) {
-            throw new BeanInstanceCreationException(INSTANTIATION_EXCEPTION_MESSAGE.formatted(name), e);
-        }
+        Object beanInstance = createInstanceUsingConstructor(dependencies);
+        injectionFields.forEach(field -> injectFieldDependencies(beanInstance, field, dependencies));
+        return beanInstance;
     }
 
-    private Object createInstanceUsingConstructor(BeanDefinition... dependencies) throws InvocationTargetException, InstantiationException, IllegalAccessException {
+    @SneakyThrows
+    private Object createInstanceUsingConstructor(BeanDefinition... dependencies) {
         if (constructor.getParameterCount() == 0) {
             return constructor.newInstance();
         }

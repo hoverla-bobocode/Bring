@@ -1,97 +1,134 @@
 package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
-import com.bobocode.hoverla.bring.testsubject.beandefinition.classbased.*;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionConfusingDependencies;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionConstructorFieldInjection;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionConstructorInjection;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionFieldInjection;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionMultipleConstructors;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionNoDependencies;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionNoName;
+import com.bobocode.hoverla.bring.test.subject.definition.ClassBasedBeanDefinitionWithName;
+import com.bobocode.hoverla.bring.test.subject.bean.TestBean1;
+import com.bobocode.hoverla.bring.test.subject.bean.TestBean2;
+import com.bobocode.hoverla.bring.test.subject.bean.TestBean3;
+import com.bobocode.hoverla.bring.test.subject.bean.TestBean4;
+import com.bobocode.hoverla.bring.test.subject.bean.TestBean5;
+import com.bobocode.hoverla.bring.test.subject.definition.TestBeanWithSingleArgumentInjectConstructor;
+import com.bobocode.hoverla.bring.test.subject.definition.TestBeanWithoutDependencies;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.Stream;
 
-import static com.bobocode.hoverla.bring.helper.BeanDefinitionAssert.assertThat;
-import static com.bobocode.hoverla.bring.testsubject.beandefinition.classbased.ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME;
+import static com.bobocode.hoverla.bring.support.BeanDefinitionAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
-@Disabled
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ClassBasedBeanDefinitionTest {
 
-    @Test
-    @DisplayName("Method name() returns default bean name")
-    void returnDefaultBeanName() {
-        // when
-        final ClassBasedBeanDefinition beanDefinition = new ClassBasedBeanDefinition(ClassBasedBeanDefinitionNoName.class);
-
-        // then
-        assertThat(beanDefinition).hasName(ClassBasedBeanDefinitionNoName.class.getName());
+    private Stream<Arguments> resolveNameArgs() {
+        return Stream.of(
+                Arguments.of(TestBean1.class, "testBean1", "Name is resolved from @Bean annotation"),
+                Arguments.of(TestBean2.class, TestBean2.class.getName(), "Name is resolved from bean type")
+        );
     }
 
-    @Test
-    @DisplayName("Method name() returns provided bean name")
-    void returnNameProvided() {
-        // when
-        final ClassBasedBeanDefinition beanDefinition = new ClassBasedBeanDefinition(ClassBasedBeanDefinitionWithName.class);
-
-        // then
-        assertThat(beanDefinition).hasName(BEAN_DEFINITION_WITH_NAME);
+    private Stream<Arguments> resolveDependenciesArgs() {
+        return Stream.of(
+                Arguments.of(TestBean1.class,
+                        Map.of(String.class.getName(), String.class,
+                                Integer.class.getName(), Integer.class,
+                                Double.class.getName(), Double.class),
+                        "Plain constructor dependencies are resolved"
+                ),
+                Arguments.of(TestBean2.class,
+                        Map.of(TestBean1.class.getName(), TestBean1.class),
+                        "@Inject constructor dependencies are resolved"
+                ),
+                Arguments.of(TestBean3.class,
+                        Map.of(TestBean1.class.getName(), TestBean1.class,
+                                TestBean2.class.getName(), TestBean2.class),
+                        "@Inject constructor and field dependencies are resolved"
+                ),
+                Arguments.of(TestBean4.class,
+                        Map.of(TestBean2.class.getName(), TestBean2.class,
+                                TestBean3.class.getName(), TestBean3.class),
+                        "@Inject field dependencies are resolved"
+                ),
+                Arguments.of(TestBean5.class,
+                        Map.of("bean1", TestBean1.class,
+                                "bean4", TestBean4.class),
+                        "Constructor and field dependencies are resolved with names from @Qualifier")
+        );
     }
 
-//    @Test
-//    @DisplayName("BeanDefinition instantiation of a bean with multiple constructors with @Inject annotation. Throws BeanDefinitionConstructionException")
-//    void testInitBeanDefinition_MultipleConfusingConstructors_ThrowException() {
-//        // given
-//        final String expectedMessage = String.format("'%s' bean has multiple constructors", ClassBasedBeanDefinitionConfusingConstructors.class);
-//
-//        // then
-//        Assertions.assertThatThrownBy(() -> new ClassBasedBeanDefinition(ClassBasedBeanDefinitionConfusingConstructors.class))
-//                .isInstanceOf(BeanDefinitionConstructionException.class)
-//                .hasMessage(expectedMessage);
-//    }
-
-    @Test
-    @DisplayName("Return correct bean type")
-    void returnType() {
-        // when
-        final ClassBasedBeanDefinition beanDefinition = new ClassBasedBeanDefinition(ClassBasedBeanDefinitionWithName.class);
-
-        // then
-        assertThat(beanDefinition).hasType(ClassBasedBeanDefinitionWithName.class);
+    private Stream<Arguments> instantiationArgs() {
+        return Stream.of(
+                Arguments.of(TestBeanWithoutDependencies.class, new BeanDefinition[0],
+                        "Instantiate bean without dependencies"
+                ),
+                Arguments.of(TestBeanWithSingleArgumentInjectConstructor.class,
+                        prepareDefinitions(TestBeanWithoutDependencies.class),
+                        "Instantiate bean with 1-argument @Inject constructor"
+                )
+        );
     }
 
-    @Test
-    @DisplayName("Return correct bean dependencies")
-    void returnTestDependencies() {
-        // given
-        String CLASS_BASED_BEAN_DEFINITION_ON_NAME = "classBasedBeanDefinitionNoName";
-        final Map<String, Class<?>> beanDependencies = Map.of(CLASS_BASED_BEAN_DEFINITION_ON_NAME, ClassBasedBeanDefinitionNoName.class,
-                ClassBasedBeanDefinitionWithName.BEAN_DEFINITION_WITH_NAME, ClassBasedBeanDefinitionWithName.class);
-
-        // when
-        final ClassBasedBeanDefinition beanDefinition =
-                new ClassBasedBeanDefinition(ClassBasedBeanDefinitionFieldInjection.class);
-
-        // then
-        assertThat(beanDefinition).hasDependencies(beanDependencies);
+    @ParameterizedTest(name = "[{index}] - Resolve name - {2}")
+    @MethodSource("resolveNameArgs")
+    void resolveNameTest(Class<?> beanClass, String expectedName, String description) {
+        var beanDefinition = new ClassBasedBeanDefinition(beanClass);
+        assertThat(beanDefinition)
+                .hasName(expectedName)
+                .hasType(beanClass); // just to cover getter for type
     }
 
-    @Test
-    @DisplayName("Create instance of a bean without dependencies")
-    void returnBeanWithNoDependencies() {
-        // given
-        final ClassBasedBeanDefinition beanDefinition =
-                new ClassBasedBeanDefinition(ClassBasedBeanDefinitionNoDependencies.class);
-
-        // when
-        final Object instance = beanDefinition.instance();
-
-        // then
-        assertNotNull(instance);
-        assertEquals(ClassBasedBeanDefinitionNoDependencies.class, instance.getClass());
+    @ParameterizedTest(name = "[{index}] - Resolve dependencies - {2}")
+    @MethodSource("resolveDependenciesArgs")
+    void resolveDependenciesTest(Class<?> beanClass, Map<String, Class<?>> expectedDependencies, String description) {
+        var beanDefinition = new ClassBasedBeanDefinition(beanClass);
+        assertThat(beanDefinition).hasDependencies(expectedDependencies);
     }
 
+
+    /*
+    1. Bean without dependencies - done
+    2. Bean with constructor but without fields - done
+    3. Bean without constructor dependencies but with fields
+    4. Bean with constructor dependencies and fields
+    5. ...
+    */
+    @ParameterizedTest(name = "[{index}] - Instantiation - {2}")
+    @MethodSource("instantiationArgs")
+    void instantiationTest(Class<?> beanClass, BeanDefinition[] dependencies, String description) {
+        var beanDefinition = new ClassBasedBeanDefinition(beanClass);
+        Object instance = beanDefinition.instance(dependencies);
+
+        Assertions.assertThat(instance)
+                .isNotNull()
+                .isInstanceOf(beanClass);
+    }
+
+    private BeanDefinition[] prepareDefinitions(Class<?>... beanClasses) {
+        return Arrays.stream(beanClasses)
+                .map(ClassBasedBeanDefinition::new)
+                .toArray(BeanDefinition[]::new);
+    }
+
+    // THESE TESTS ARE TO BE REMOVED
     @Test
+    @Disabled
     @DisplayName("Create instance of a bean with constructor injection")
     void returnBeanWithConstructorInjection() {
         // given
@@ -125,8 +162,8 @@ class ClassBasedBeanDefinitionTest {
         verify(dependency1).instance(any());
         verify(dependency2).instance(any());
     }
-
     @Test
+    @Disabled
     @DisplayName("Create instance of a bean with field injection")
     void returnBeanWithFieldInjection() {
         // given
@@ -165,6 +202,7 @@ class ClassBasedBeanDefinitionTest {
     }
 
     @Test
+    @Disabled
     @DisplayName("Create instance of a bean with constructor and field injection")
     void returnBeanWithConstructorAndFieldInjection() {
         // given
@@ -207,6 +245,7 @@ class ClassBasedBeanDefinitionTest {
     }
 
     @Test
+    @Disabled
     @DisplayName("Create bean instance. Dependencies return null. Throws BeanInstanceCreationException")
     void throwBeanInstanceCreationExceptionWhenDependenciesAreNull() {
         // given
@@ -231,6 +270,7 @@ class ClassBasedBeanDefinitionTest {
     }
 
     @Test
+    @Disabled
     @DisplayName("Create bean instance. Parameters are nulls. Throws BeanInstanceCreationException")
     void throwBeanInstanceCreationExceptionWhenParameterAreNull() {
         // given
@@ -255,6 +295,7 @@ class ClassBasedBeanDefinitionTest {
     }
 
     @Test
+    @Disabled
     @DisplayName("Create instance of a bean with confusing dependencies")
     void returnBeanWithConfusingDependencies() {
         // given
@@ -297,6 +338,7 @@ class ClassBasedBeanDefinitionTest {
     }
 
     @Test
+    @Disabled
     @DisplayName("Create instance of a bean with multiple constructors")
     void testInstance_ReturnBeanWithMultipleConstructors() {
         // given
