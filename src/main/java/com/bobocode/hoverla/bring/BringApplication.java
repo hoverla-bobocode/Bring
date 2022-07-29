@@ -107,7 +107,8 @@ public class BringApplication {
             return this;
         }
 
-        @SuppressWarnings(value = "see https://rules.sonarsource.com/java/RSPEC-4792")
+        @SuppressWarnings(value = "Implementation does not contain the vulnerabilities listed in this rule" +
+                "https://rules.sonarsource.com/java/RSPEC-4792")
         public ApplicationContext build() {
             Logger logger = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
             logger.setLevel(logLevel != null ? logLevel : Level.INFO);

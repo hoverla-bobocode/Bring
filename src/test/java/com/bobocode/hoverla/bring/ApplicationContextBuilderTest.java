@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 
 import java.util.stream.Stream;
 
+import static com.bobocode.hoverla.bring.BringApplication.getContextBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,7 +26,7 @@ class ApplicationContextBuilderTest {
     @ParameterizedTest(name = "Throws exception when null or empty package name was provided")
     @NullAndEmptySource
     void throwsExceptionWhenNullOrEmptyPackages(String packageName) {
-        var builder =  BringApplication.getContextBuilder()
+        BringApplication.ApplicationContextBuilder builder = getContextBuilder()
                 .packagesToScan(packageName);
         assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalArgumentException.class)
@@ -35,7 +36,7 @@ class ApplicationContextBuilderTest {
     @DisplayName("Throws exception when no packages were provided")
     @Test
     void throwsExceptionWhenNoPackagesToScan() {
-        var builder =  BringApplication.getContextBuilder();
+        var builder = getContextBuilder();
         assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(EXCEPTION_MESSAGE);
@@ -44,16 +45,16 @@ class ApplicationContextBuilderTest {
     @DisplayName("No exception was thrown when packages to scan were provided")
     @Test
     void providePackagesToScan() {
-        assertThatNoException().isThrownBy(() -> BringApplication.getContextBuilder()
+        assertThatNoException().isThrownBy(() -> getContextBuilder()
                 .packagesToScan(PACKAGE)
                 .build());
     }
 
 
     @ParameterizedTest(name = "Log level [{1}] is set")
-    @MethodSource
+    @MethodSource("logLevelArgs")
     void setLogLevel(Level input, Level output) {
-        BringApplication.getContextBuilder()
+        getContextBuilder()
                 .packagesToScan(PACKAGE)
                 .logLevel(input)
                 .build();
@@ -63,7 +64,7 @@ class ApplicationContextBuilderTest {
 
     }
 
-    private Stream<Arguments> setLogLevel() {
+    private Stream<Arguments> logLevelArgs() {
         return Stream.of(
                 Arguments.of(Level.OFF, Level.OFF),
                 Arguments.of(Level.ERROR, Level.ERROR),
