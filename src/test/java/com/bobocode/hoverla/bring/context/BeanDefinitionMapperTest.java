@@ -1,7 +1,7 @@
 package com.bobocode.hoverla.bring.context;
 
+import com.bobocode.hoverla.bring.helper.BeanDefinitionAssert;
 import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfig;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,13 +18,14 @@ class BeanDefinitionMapperTest {
     }
 
     @Test
-    @DisplayName("Can map to ConfigBasedBeanDefinition passing bean config class and bean method")
+    @DisplayName("Maps ConfigBasedBeanDefinition when bean config class and bean method are passed")
     void mapsToConfigBasedBeanDefinition() throws NoSuchMethodException {
         TestBeanConfig beanConfigClass = new TestBeanConfig();
         Method beanMethod = beanConfigClass.getClass().getMethod("beanWithNameInAnnotation");
 
         BeanDefinition beanDefinition = mapper.mapToBeanDefinition(beanConfigClass, beanMethod);
 
-        Assertions.assertThat(beanDefinition).isInstanceOf(ConfigBasedBeanDefinition.class);
+        BeanDefinitionAssert.assertThat(beanDefinition)
+                .isInstanceOf(ConfigBasedBeanDefinition.class);
     }
 }
