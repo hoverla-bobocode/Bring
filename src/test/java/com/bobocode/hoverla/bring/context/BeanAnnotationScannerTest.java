@@ -1,9 +1,10 @@
 package com.bobocode.hoverla.bring.context;
 
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean1;
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean2;
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean3;
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean4;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean1;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean2;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean3;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean4;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean5;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,8 +27,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class BeanAnnotationScannerTest {
 
-    private static final String TEST_PACKAGE_TO_SCAN = "com.bobocode.hoverla.bring.testsubject.scanner";
-    private static final String EMPTY_PACKAGE_TO_SCAN = "com.bobocode.hoverla.bring.testsubject.scanner.empty";
+    private static final String TEST_PACKAGE_TO_SCAN = "com.bobocode.hoverla.bring.test.subject.bean.util";
+    private static final String EMPTY_PACKAGE_TO_SCAN = "com.bobocode.hoverla.bring.test.subject.empty";
 
     @Mock
     private BeanAnnotationClassValidator validator;
@@ -38,7 +39,8 @@ class BeanAnnotationScannerTest {
     @Test
     @DisplayName("Scans all beans from a given package, validates those classes and maps them to bean definitions")
     void testScan() {
-        Set<Class<?>> expectedBeanClasses = Set.of(TestBean1.class, TestBean2.class, TestBean3.class, TestBean4.class);
+        Set<Class<?>> expectedBeanClasses = Set.of(TestBean1.class, TestBean2.class, TestBean3.class,
+                TestBean4.class, TestBean5.class);
         for (Class<?> beanClass : expectedBeanClasses) {
             BeanDefinition expectedBD = prepareBeanDefinition(beanClass);
             when(mapper.mapToBeanDefinition(beanClass)).thenReturn(expectedBD);
@@ -48,7 +50,7 @@ class BeanAnnotationScannerTest {
         List<BeanDefinition> scannedDefinitions = beanAnnotationScanner.scan();
 
         verify(validator).validateBeanClasses(anySet());
-        verify(mapper, times(4)).mapToBeanDefinition(any(Class.class));
+        verify(mapper, times(5)).mapToBeanDefinition(any(Class.class));
 
         assertThat(scannedDefinitions)
                 .hasSameSizeAs(expectedBeanClasses)

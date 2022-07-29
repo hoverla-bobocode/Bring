@@ -16,13 +16,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class BeanConfigurationClassScannerTest {
 
-    private static final String CONFIG_PACKAGE_NAME = "com.bobocode.hoverla.bring.testsubject.scanner";
-    private static final String NO_CONFIG_PACKAGE_NAME = "com.bobocode.hoverla.bring.testsubject.scanner.empty";
+    private static final String CONFIG_PACKAGE_NAME = "com.bobocode.hoverla.bring.test.subject.config";
+    private static final String NO_CONFIG_PACKAGE_NAME = "com.bobocode.hoverla.bring.test.subject.config.empty";
 
     @Mock
-    private BeanConfigClassValidator validator;
+    private BeanConfigurationClassValidator validator;
+
     @Mock
     private BeanDefinitionMapper mapper;
+
     private BeanConfigurationClassScanner scanner;
 
     @Test
@@ -30,7 +32,7 @@ class BeanConfigurationClassScannerTest {
     void scansAllBeansFromConfigClasses() {
         scanner = new BeanConfigurationClassScanner(validator, mapper, CONFIG_PACKAGE_NAME, NO_CONFIG_PACKAGE_NAME);
         List<BeanDefinition> beanDefinitions = scanner.scan();
-        assertThat(beanDefinitions).hasSize(4);
+        assertThat(beanDefinitions).hasSize(5);
     }
 
     @Test
