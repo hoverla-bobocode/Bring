@@ -83,7 +83,7 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         return instance;
     }
 
-    private static String resolveName(Class<?> beanClass) {
+    private String resolveName(Class<?> beanClass) {
         Bean annotation = beanClass.getAnnotation(Bean.class);
         String beanName = annotation.name();
         if (isBlank(beanName)) {
@@ -172,13 +172,33 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         if (constructor.getParameterCount() == 0) {
             return constructor.newInstance();
         }
-        List<Object> dependenciesForConstructor = Arrays.stream(constructor.getParameters())
-                .map(parameter -> getFromDependencies(parameter, dependencies))
+        Object[] dependenciesForConstructor = Arrays.stream(constructor.getParameters())
+                .map(parameter -> getMatchingDependency(parameter, dependencies))
                 .filter(Optional::isPresent)
                 .map(dependency -> dependency.get().instance())
-                .toList();
+                .toArray();
 
-        return constructor.newInstance(dependenciesForConstructor.toArray());
+        return constructor.newInstance(dependenciesForConstructor);
+    }
+
+    private Optional<BeanDefinition> getMatchingDependency(Parameter parameter, BeanDefinition[] dependencies) {
+        return Arrays.stream(dependencies)
+                .filter(dependency -> parameterMatchesDependency(parameter, dependency))
+                .findAny();
+    }
+
+    private boolean parameterMatchesDependency(Parameter parameter, BeanDefinition dependency) {
+        boolean typesEqual = dependency.type().equals(parameter.getType());
+        if (!typesEqual) {
+            return false;
+        }
+
+        if (parameter.isAnnotationPresent(Qualifier.class)) {
+            String qualifierName = parameter.getAnnotation(Qualifier.class).value();
+            return qualifierName.equals(dependency.name());
+        }
+        String parameterTypeName = parameter.getType().getName();
+        return parameterTypeName.equals(dependency.name());
     }
 
     private void injectFieldDependencies(Object beanInstance, Field targetField, BeanDefinition... dependencies) {
@@ -186,13 +206,6 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
                 .filter(dependency -> fieldMatchesDependency(targetField, dependency))
                 .findAny()
                 .ifPresent(dependency -> setFieldValue(targetField, beanInstance, dependency));
-    }
-
-    @SneakyThrows
-    @SuppressWarnings("java:S3011")
-    private void setFieldValue(Field field, Object beanInstance, BeanDefinition dependency) {
-        field.setAccessible(true);
-        field.set(beanInstance, dependency.instance());
     }
 
     private boolean fieldMatchesDependency(Field field, BeanDefinition dependency) {
@@ -204,23 +217,10 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         return fieldType.getName().equals(dependency.name()) && fieldType.equals(dependency.type());
     }
 
-    private static Optional<BeanDefinition> getFromDependencies(Parameter parameter, BeanDefinition[] dependencies) {
-        return Arrays.stream(dependencies)
-                .filter(dependency -> isParameterEqualWithDependency(parameter, dependency))
-                .findAny();
-    }
-
-    private static boolean isParameterEqualWithDependency(Parameter parameter, BeanDefinition dependency) {
-        boolean typesEqual = dependency.type().equals(parameter.getType());
-
-        if (!typesEqual) {
-            return false;
-        }
-        if (parameter.isAnnotationPresent(Qualifier.class)) {
-            String qualifierName = parameter.getAnnotation(Qualifier.class).value();
-            return qualifierName.equals(dependency.name());
-        }
-        String parameterTypeName = parameter.getType().getName();
-        return parameterTypeName.equals(dependency.name());
+    @SneakyThrows
+    @SuppressWarnings("java:S3011")
+    private void setFieldValue(Field field, Object beanInstance, BeanDefinition dependency) {
+        field.setAccessible(true);
+        field.set(beanInstance, dependency.instance());
     }
 }
