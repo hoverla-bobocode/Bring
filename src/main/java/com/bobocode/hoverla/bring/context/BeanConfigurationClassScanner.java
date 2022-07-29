@@ -24,10 +24,10 @@ import java.util.Set;
 public class BeanConfigurationClassScanner implements BeanScanner {
 
     private final String[] packagesToScan;
-    private final BeanConfigClassValidator validator;
+    private final BeanConfigurationClassValidator validator;
     private final BeanDefinitionMapper mapper;
 
-    public BeanConfigurationClassScanner(BeanConfigClassValidator validator,
+    public BeanConfigurationClassScanner(BeanConfigurationClassValidator validator,
                                          BeanDefinitionMapper mapper,
                                          String... packagesToScan) {
         this.packagesToScan = packagesToScan;
@@ -39,12 +39,12 @@ public class BeanConfigurationClassScanner implements BeanScanner {
      * Performs scan of classes annotated with {@link Configuration @Configuration}
      * from given {@link BeanConfigurationClassScanner#packagesToScan packages}.
      *
-     * <p>Scanned {@link Class} objects are then transferred to {@link BeanConfigClassValidator validator} for further validation process.</p>
+     * <p>Scanned {@link Class} objects are then transferred to {@link BeanConfigurationClassValidator validator} for further validation process.</p>
      * <p>{@link BeanDefinitionMapper} is used to map scanned {@link Class} objects to {@link BeanDefinition}.</p>
      *
      * @return {@link List} of {@link BeanDefinition} objects.
      * @see BeanDefinition
-     * @see BeanConfigClassValidator
+     * @see BeanConfigurationClassValidator
      * @see BeanDefinitionMapper
      */
     @Override
@@ -82,7 +82,7 @@ public class BeanConfigurationClassScanner implements BeanScanner {
 
     /**
      * Creates instance of config class to share it across all bean definitions of the target config class.
-     * No-arg constructor presence is checked during config class {@link BeanConfigClassValidator validation}.
+     * No-arg constructor presence is checked during config class {@link BeanConfigurationClassValidator validation}.
      */
     @SneakyThrows
     private Object createConfigClassInstance(Class<?> configClass) {

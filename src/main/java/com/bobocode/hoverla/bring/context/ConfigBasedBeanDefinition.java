@@ -17,7 +17,7 @@ import java.util.Objects;
 import static java.util.stream.Collectors.toMap;
 
 /**
- * Java Configuration-based bean definition.
+ * Java configuration-based implementation of {@link BeanDefinition}.
  *
  * <p>Requires instance of a class marked with {@link Configuration @Configuration} annotation
  * and method marked with {@link Bean @Bean} annotation that represents this bean initialization point.</p>
@@ -38,7 +38,7 @@ public class ConfigBasedBeanDefinition implements BeanDefinition {
 
     /**
      * During execution doesn't instantiate target bean,
-     * but parses all info such as name, type, dependencies etc. and preserves this info to be used
+     * but parses all info such as name, type, dependencies etc. and preserves this info to be used later on.
      *
      * @param configInstance instance of a class marked as {@link Configuration} that contains method representing target bean
      * @param beanMethod     method that represents target bean and is used to instantiate target bean

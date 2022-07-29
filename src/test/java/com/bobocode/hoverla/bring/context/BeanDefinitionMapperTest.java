@@ -1,7 +1,7 @@
 package com.bobocode.hoverla.bring.context;
 
-import com.bobocode.hoverla.bring.helper.BeanDefinitionAssert;
-import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfig;
+import com.bobocode.hoverla.bring.support.BeanDefinitionAssert;
+import com.bobocode.hoverla.bring.test.subject.config.TestBeanConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

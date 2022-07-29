@@ -1,21 +1,22 @@
 package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.BeanClassValidationException;
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean1;
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean2;
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean3;
-import com.bobocode.hoverla.bring.testsubject.scanner.TestBean4;
-import com.bobocode.hoverla.bring.testsubject.validator.constructor.TestBeanWithInjectConstructors;
-import com.bobocode.hoverla.bring.testsubject.validator.constructor.TestBeanWithPlainConstructors;
-import com.bobocode.hoverla.bring.testsubject.validator.constructor.TestBeanWithSingleInjectConstructor;
-import com.bobocode.hoverla.bring.testsubject.validator.constructor.TestBeanWithoutConstructors;
-import com.bobocode.hoverla.bring.testsubject.validator.field.TestBeanWithFinalInjectFields;
-import com.bobocode.hoverla.bring.testsubject.validator.field.TestBeanWithStaticInjectFields;
-import com.bobocode.hoverla.bring.testsubject.validator.type.AbstractTestBean;
-import com.bobocode.hoverla.bring.testsubject.validator.type.EnumTestBean;
-import com.bobocode.hoverla.bring.testsubject.validator.type.InterfaceTestBean;
-import com.bobocode.hoverla.bring.testsubject.validator.type.OuterTestBean;
-import com.bobocode.hoverla.bring.testsubject.validator.type.RecordTestBean;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean1;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean2;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean3;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean4;
+import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean5;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithInjectConstructors;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithPlainConstructors;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithSingleInjectConstructor;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithoutConstructors;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.field.TestBeanWithFinalInjectFields;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.field.TestBeanWithStaticInjectFields;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.type.AbstractTestBean;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.type.EnumTestBean;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.type.InterfaceTestBean;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.type.OuterTestBean;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.type.RecordTestBean;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,7 +39,8 @@ class BeanAnnotationClassValidatorTest {
                 Arguments.of(TestBean1.class, "validation succeeds: no invalid fields, 1 valid plain constructor"),
                 Arguments.of(TestBean2.class, "validation succeeds: No invalid fields, 1 valid @Inject constructor"),
                 Arguments.of(TestBean3.class, "validation succeeds: 1 valid @Inject field, 1 valid @Inject constructor"),
-                Arguments.of(TestBean4.class, "validation succeeds: 2 valid @Inject fields, no invalid constructors")
+                Arguments.of(TestBean4.class, "validation succeeds: 2 valid @Inject fields, no invalid constructors"),
+                Arguments.of(TestBean5.class, "validation succeeds: 1 valid @Inject field, 1 valid plain constructor")
         );
     }
 

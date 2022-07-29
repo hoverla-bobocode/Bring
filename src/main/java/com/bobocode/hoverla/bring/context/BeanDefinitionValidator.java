@@ -51,7 +51,6 @@ import static org.apache.commons.lang3.StringUtils.containsAny;
  *     </ol>
  *     </li>
  */
-// TODO validate dependencies names
 @Slf4j
 public class BeanDefinitionValidator {
 
@@ -127,7 +126,6 @@ public class BeanDefinitionValidator {
                                     List<BeanDefinition> allDefinitions,
                                     Map<String, Set<String>> requiredDependencyNames,
                                     Map.Entry<String, Class<?>> dependencyEntry) {
-
         String dependencyName = dependencyEntry.getKey();
         Class<?> dependencyType = dependencyEntry.getValue();
         log.trace("Checking dependency {} - {}", dependencyName, dependencyType.getName());
@@ -151,7 +149,7 @@ public class BeanDefinitionValidator {
         } else {
             log.warn("Was not able to find bean by name `{}` - trying to find by type: {}",
                     dependencyName, dependencyType.getName());
-            foundDependency = tryToFindByType(dependencyType, allDefinitions, dependencyName);
+            foundDependency = tryFindByType(dependencyType, allDefinitions, dependencyName);
             log.warn("Found bean `{}` of class {}", foundDependency.name(), foundDependency.type().getName());
         }
 
@@ -163,7 +161,6 @@ public class BeanDefinitionValidator {
                                          BeanDefinition foundDependency,
                                          List<BeanDefinition> allDefinitions,
                                          Map<String, Set<String>> requiredDependencyNames) {
-
         Map<String, Class<?>> innerDependencies = foundDependency.dependencies();
 
         if (innerDependencies.isEmpty()) {
@@ -229,7 +226,7 @@ public class BeanDefinitionValidator {
         }
     }
 
-    private BeanDefinition tryToFindByType(Class<?> type, List<BeanDefinition> beanDefinitions, String name) {
+    private BeanDefinition tryFindByType(Class<?> type, List<BeanDefinition> beanDefinitions, String name) {
         List<BeanDefinition> beansByType = findByType(type, beanDefinitions);
         if (beansByType.size() > 1) {
             throw new BeanValidationException(MULTIPLE_BEANS_WITH_TYPE.formatted(type));

@@ -3,6 +3,7 @@ package com.bobocode.hoverla.bring.context;
 import com.bobocode.hoverla.bring.annotation.Bean;
 import com.bobocode.hoverla.bring.annotation.Inject;
 import com.bobocode.hoverla.bring.annotation.Qualifier;
+import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +17,12 @@ import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
- * Java Class-based bean definition. Requires instance of class marked with {@link Bean} instance.
- * Field should be marked with {@link Inject} annotation for dependencies injection.
+ * Java class-based implementation of {@link BeanDefinition}.
+ *
+ * <p>Requires instance of class marked with {@link Bean @Bean} annotation.</p>
+ *
+ * @see Bean
+ * @see BeanDefinition
  */
 @Slf4j
 public class ClassBasedBeanDefinition implements BeanDefinition {
@@ -25,18 +30,23 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     private static final String INSTANTIATION_EXCEPTION_MESSAGE = "'%s' bean can't be instantiated";
 
     private Object instance;
-
     private final String name;
-
     private final Class<?> type;
-
     private final Map<String, Class<?>> dependencies;
-
     private Constructor<?> constructor;
-
     private List<Field> injectionFields;
 
+    /**
+     * During execution doesn't instantiate target bean,
+     * but parses all info such as name, type, dependencies. and preserves this info to be used later on.
+     *
+     * @param beanClass instance of a class marked as {@link Bean @Bean}.
+     * @throws BeanDefinitionConstructionException when an unexpected exception occurred during bean instantiation
+     * @throws NullPointerException                when passed {@code beanClass} is null
+     */
     public ClassBasedBeanDefinition(Class<?> beanClass) {
+        Objects.requireNonNull(beanClass, "Bean class cannot be null");
+
         this.type = beanClass;
         log.debug("Creating {} from class '{}'", ClassBasedBeanDefinition.class.getSimpleName(), this.type.getName());
 
@@ -48,23 +58,38 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     }
 
     /**
-     * @return name of bean which is either equals to bean class name
-     * or to name specified in {@link Bean}
+     * See {@link BeanDefinition#name()}.
+     * <p>This name is either equal to current bean {@link Class#getName()}
+     * or to name specified in {@link Bean} annotation.</p>
+     *
+     * @return name of current {@link BeanDefinition}.
      */
     @Override
     public String name() {
         return name;
     }
 
+    /**
+     * See {@link BeanDefinition#type()}
+     * <p>Type is equal to current bean {@link Class}.</p>
+     *
+     * @return type of current {@link BeanDefinition}.
+     */
     @Override
     public Class<?> type() {
         return type;
     }
 
     /**
-     * @return dependencies map where keys are bean constructor parameters names taken from type or {@link Qualifier},
-     * and bean fields names taken from type or {@link Qualifier}, and
-     * values are parameters or fields types
+     * See {@link BeanDefinition#dependencies()}.
+     *
+     * <p>Keys are taken from {@link Qualifier @Qualifier} annotation on dependency constructor {@link Parameter}
+     * or {@link Field} annotated with {@link Inject @Inject}.
+     * In case annotation is not present key will be equal to {@link Class#getName()} of a corresponding dependency.</p>
+     *
+     * <p>Values are taken from {@link Parameter#getType()} or {@link Field#getType()} of a corresponding dependency.</p>
+     *
+     * @return map of names and types of dependent {@link BeanDefinition}s.
      */
     @Override
     public Map<String, Class<?>> dependencies() {
@@ -72,18 +97,41 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     }
 
     /**
-     * Lazily initializes bean on the first call. After it happened further calls return a cached instance.
+     * See {@link BeanDefinition#isInstantiated()}
+     *
+     * @return {@code true} if current {@link ClassBasedBeanDefinition#instance} is not null, {@code false} otherwise.
      */
     @Override
-    public Object instance(BeanDefinition... dependencies) {
-        if (Objects.isNull(instance)) {
-            return createInstance(dependencies);
-        }
-        log.debug("Getting existing '{}' bean instance", name);
-        return instance;
+    public boolean isInstantiated() {
+        return Objects.nonNull(instance);
     }
 
-    private static String resolveName(Class<?> beanClass) {
+    /**
+     * See {@link BeanDefinition#instantiate(BeanDefinition...)}
+     *
+     * @param dependencies {@link BeanDefinition} objects that are treated as required dependencies for
+     *                     instantiating a bean from current {@link BeanDefinition}
+     */
+    @Override
+    public void instantiate(BeanDefinition... dependencies) {
+        if (!isInstantiated()) {
+            log.debug("Creating new instance of bean '{}'", name);
+            instance = createInstance(dependencies);
+        }
+    }
+
+    /**
+     * See {@link BeanDefinition#getInstance()}.
+     *
+     * @return bean instance of current {@link BeanDefinition}.
+     * @throws NullPointerException when {@link ClassBasedBeanDefinition#instance} is null.
+     */
+    @Override
+    public Object getInstance() {
+        return Objects.requireNonNull(instance, "Instance of %s has not been created yet".formatted(name));
+    }
+
+    private String resolveName(Class<?> beanClass) {
         Bean annotation = beanClass.getAnnotation(Bean.class);
         String beanName = annotation.name();
         if (isBlank(beanName)) {
@@ -140,10 +188,10 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
                 .collect(toMap(field -> resolveMemberName(field, field.getType()), Field::getType));
     }
 
-    private <M extends AnnotatedElement> String resolveMemberName(M classMember, Class<?> type) {
+    private <M extends AnnotatedElement> String resolveMemberName(M classMember, Class<?> memberType) {
         return Optional.ofNullable(classMember.getAnnotation(Qualifier.class))
                 .map(Qualifier::value)
-                .orElse(type.getName());
+                .orElse(memberType.getName());
     }
 
     private Object createInstance(BeanDefinition... dependencies) {
@@ -153,74 +201,65 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
             this.instance = doCreateInstance(dependencies);
             log.debug("'{}' bean was instantiated", name);
             return instance;
-        } catch (Exception e) {
+        } catch (Exception e) { // all @SneakyThrows stuff is caught here
             throw new BeanInstanceCreationException(INSTANTIATION_EXCEPTION_MESSAGE.formatted(name), e);
         }
     }
 
+    @SneakyThrows
     private Object doCreateInstance(BeanDefinition... dependencies) {
-        try {
-            Object beanInstance = createInstanceUsingConstructor(dependencies);
-            injectionFields.forEach(field -> injectFieldDependencies(beanInstance, field, dependencies));
-            return beanInstance;
-        } catch (Exception e) {
-            throw new BeanInstanceCreationException(INSTANTIATION_EXCEPTION_MESSAGE.formatted(name), e);
-        }
+        Object beanInstance = createInstanceUsingConstructor(dependencies);
+        injectionFields.forEach(field -> injectFieldDependencies(beanInstance, field, dependencies));
+        return beanInstance;
     }
 
-    private Object createInstanceUsingConstructor(BeanDefinition... dependencies) throws InvocationTargetException, InstantiationException, IllegalAccessException {
+    @SneakyThrows
+    private Object createInstanceUsingConstructor(BeanDefinition... dependencies) {
         if (constructor.getParameterCount() == 0) {
             return constructor.newInstance();
         }
-        List<Object> dependenciesForConstructor = Arrays.stream(constructor.getParameters())
-                .map(parameter -> getFromDependencies(parameter, dependencies))
+        Object[] dependenciesForConstructor = Arrays.stream(constructor.getParameters())
+                .map(parameter -> getMatchingDependency(parameter, dependencies))
                 .filter(Optional::isPresent)
-                .map(dependency -> dependency.get().instance())
-                .toList();
+                .map(dependency -> dependency.get().getInstance())
+                .toArray();
 
-        return constructor.newInstance(dependenciesForConstructor.toArray());
+        return constructor.newInstance(dependenciesForConstructor);
+    }
+
+    private Optional<BeanDefinition> getMatchingDependency(Parameter parameter, BeanDefinition[] dependencies) {
+        return Arrays.stream(dependencies)
+                .filter(dependency -> checkDependenciesMatch(parameter, parameter.getType(), dependency))
+                .findAny();
     }
 
     private void injectFieldDependencies(Object beanInstance, Field targetField, BeanDefinition... dependencies) {
         Arrays.stream(dependencies)
-                .filter(dependency -> fieldMatchesDependency(targetField, dependency))
+                .filter(dependency -> checkDependenciesMatch(targetField, targetField.getType(), dependency))
                 .findAny()
                 .ifPresent(dependency -> setFieldValue(targetField, beanInstance, dependency));
+    }
+
+    private <T extends AnnotatedElement> boolean checkDependenciesMatch(T targetDependency, Class<?> targetType,
+                                                                        BeanDefinition sourceDependency) {
+        boolean typesAssignable = targetType.isAssignableFrom(sourceDependency.type());
+        if (!typesAssignable) {
+            return false;
+        }
+
+        if (targetDependency.isAnnotationPresent(Qualifier.class)) {
+            String qualifierValue = targetDependency.getAnnotation(Qualifier.class).value();
+            return qualifierValue.equals(sourceDependency.name());
+        }
+
+        String targetTypeName = targetType.getName();
+        return targetTypeName.equals(sourceDependency.name());
     }
 
     @SneakyThrows
     @SuppressWarnings("java:S3011")
     private void setFieldValue(Field field, Object beanInstance, BeanDefinition dependency) {
         field.setAccessible(true);
-        field.set(beanInstance, dependency.instance());
-    }
-
-    private boolean fieldMatchesDependency(Field field, BeanDefinition dependency) {
-        if (field.isAnnotationPresent(Qualifier.class)
-                && field.getAnnotation(Qualifier.class).value().equals(dependency.name())) {
-            return true;
-        }
-        Class<?> fieldType = field.getType();
-        return fieldType.getName().equals(dependency.name()) && fieldType.equals(dependency.type());
-    }
-
-    private static Optional<BeanDefinition> getFromDependencies(Parameter parameter, BeanDefinition[] dependencies) {
-        return Arrays.stream(dependencies)
-                .filter(dependency -> isParameterEqualWithDependency(parameter, dependency))
-                .findAny();
-    }
-
-    private static boolean isParameterEqualWithDependency(Parameter parameter, BeanDefinition dependency) {
-        boolean typesEqual = dependency.type().equals(parameter.getType());
-
-        if (!typesEqual) {
-            return false;
-        }
-        if (parameter.isAnnotationPresent(Qualifier.class)) {
-            String qualifierName = parameter.getAnnotation(Qualifier.class).value();
-            return qualifierName.equals(dependency.name());
-        }
-        String parameterTypeName = parameter.getType().getName();
-        return parameterTypeName.equals(dependency.name());
+        field.set(beanInstance, dependency.getInstance());
     }
 }
