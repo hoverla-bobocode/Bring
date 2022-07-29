@@ -21,6 +21,7 @@ public class BeanInitializer {
 
     /**
      * Triggers instantiation of all beans by passing their required dependencies.
+     *
      * @param beanDefinitionsTable {@link Table} with all {@link BeanDefinition} objects handled by current context.
      */
     public void initialize(Table<String, Class<?>, BeanDefinition> beanDefinitionsTable) {
