@@ -31,7 +31,7 @@ import java.util.List;
  * @see BeanScanner
  */
 @Slf4j
-class BeanConfigClassValidator {
+public class BeanConfigClassValidator {
     private static final String VIOLATION_MSG_DELIMITER = "\n-";
 
     /**
@@ -39,7 +39,7 @@ class BeanConfigClassValidator {
      *
      * @param configClass target bean configuration class
      */
-    void validate(Class<?> configClass) {
+    public void validate(Class<?> configClass) {
         List<String> validationMessages = validateConfigClass(configClass);
         List<String> methodsValidationMessages = validateMethods(configClass.getDeclaredMethods());
 

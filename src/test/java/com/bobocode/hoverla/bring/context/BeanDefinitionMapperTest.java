@@ -2,7 +2,6 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.helper.BeanDefinitionAssert;
 import com.bobocode.hoverla.bring.testsubject.config.TestBeanConfig;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,12 +9,7 @@ import java.lang.reflect.Method;
 
 class BeanDefinitionMapperTest {
 
-    private BeanDefinitionMapper mapper;
-
-    @BeforeEach
-    void setUp() {
-        mapper = new BeanDefinitionMapper();
-    }
+    private final BeanDefinitionMapper mapper = new BeanDefinitionMapper();
 
     @Test
     @DisplayName("Maps ConfigBasedBeanDefinition when bean config class and bean method are passed")

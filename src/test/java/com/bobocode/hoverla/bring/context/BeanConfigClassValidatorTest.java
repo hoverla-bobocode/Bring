@@ -10,9 +10,9 @@ import com.bobocode.hoverla.bring.testsubject.validator.config.NoDefaultConstruc
 import com.bobocode.hoverla.bring.testsubject.validator.config.RecordTestBeanConfig;
 import com.bobocode.hoverla.bring.testsubject.validator.config.ValidTestBeanConfig;
 import lombok.SneakyThrows;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -22,12 +22,13 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BeanConfigClassValidatorTest {
 
-    private BeanConfigClassValidator validator;
+    private final BeanConfigClassValidator validator = new BeanConfigClassValidator();
 
     @SneakyThrows
-    private static Stream<Arguments> invalidBeanConfigs() {
+    private Stream<Arguments> invalidBeanConfigs() {
         return Stream.of(
                 Arguments.of(
                         AbstractTestBeanConfig.class,
@@ -54,8 +55,7 @@ class BeanConfigClassValidatorTest {
         );
     }
 
-    @SneakyThrows
-    public static Stream<Arguments> invalidBeanMethodsMessages() {
+    private Stream<Arguments> invalidBeanMethodsMessages() {
         return Stream.of(
                 Arguments.of("privateMethod method must be public",
                         "Doesn't allow method marked as @Bean to be private"),
@@ -69,11 +69,6 @@ class BeanConfigClassValidatorTest {
                         "staticMethod method must not be static",
                         "Doesn't allow method marked as @Bean to be static")
         );
-    }
-
-    @BeforeEach
-    void setUp() {
-        validator = new BeanConfigClassValidator();
     }
 
     @Test
@@ -92,7 +87,6 @@ class BeanConfigClassValidatorTest {
 
     @ParameterizedTest(name = "[{index}]: {1}")
     @MethodSource("invalidBeanMethodsMessages")
-    @SneakyThrows
     void validateInterfaceBeanConfigClass(String exceptionMsg, String description) {
         assertThatThrownBy(() -> validator.validate(InvalidBeanMethodsTestConfig.class))
                 .isInstanceOf(BeanConfigValidationException.class)
