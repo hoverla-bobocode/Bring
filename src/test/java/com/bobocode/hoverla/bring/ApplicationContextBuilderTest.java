@@ -28,22 +28,24 @@ class ApplicationContextBuilderTest {
     void throwsExceptionWhenNullOrEmptyPackages(String packageName) {
         BringApplication.ApplicationContextBuilder builder = getContextBuilder()
                 .packagesToScan(packageName);
+
         assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(EXCEPTION_MESSAGE);
+                .hasMessage(EXCEPTION_MESSAGE);
     }
 
-    @DisplayName("Throws exception when no packages were provided")
     @Test
+    @DisplayName("Throws exception when no packages were provided")
     void throwsExceptionWhenNoPackagesToScan() {
         BringApplication.ApplicationContextBuilder builder = getContextBuilder();
+
         assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(EXCEPTION_MESSAGE);
+                .hasMessage(EXCEPTION_MESSAGE);
     }
 
-    @DisplayName("No exception was thrown when packages to scan were provided")
     @Test
+    @DisplayName("No exception was thrown when packages to scan were provided")
     void providePackagesToScan() {
         assertThatNoException().isThrownBy(() -> getContextBuilder()
                 .packagesToScan(PACKAGE)
