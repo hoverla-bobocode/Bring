@@ -29,7 +29,7 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     /**
      * Scanners scan application packages to define {@link BeanDefinition} configs.
-     * Received list of bean definitions validates by validator to avoid duplicates and other problems (see {@link BeanValidator}).
+     * Received list of bean definitions validates by validator to avoid duplicates and other problems (see {@link BeanDefinitionValidator}).
      * Beans definitions list maps to container structure. It's Table<String, Class<?>, BeanDefinition>, where
      * - row key is a name of bean
      * - column key is a type of bean
@@ -92,7 +92,7 @@ public class ApplicationContextImpl implements ApplicationContext {
         List<T> beans = beanDefinitionTable.column(beanType)
                 .values()
                 .stream()
-                .map(beanDefinition -> beanType.cast(beanDefinition.instance()))
+                .map(beanDefinition -> beanType.cast(beanDefinition.getInstance()))
                 .toList();
         if (beans.isEmpty()) {
             throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName()));
@@ -109,7 +109,7 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .values()
                 .stream()
                 .findFirst()
-                .map(BeanDefinition::instance)
+                .map(BeanDefinition::getInstance)
                 .orElseThrow(() -> new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName)));
     }
 
@@ -133,7 +133,7 @@ public class ApplicationContextImpl implements ApplicationContext {
         return beanDefinitionTable.column(beanType)
                 .entrySet()
                 .stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> beanType.cast(entry.getValue().instance())));
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> beanType.cast(entry.getValue().getInstance())));
     }
 
     @Override

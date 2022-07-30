@@ -22,6 +22,11 @@ public class TestBeanConfig {
         return 0;
     }
 
+    @Bean
+    public Byte beanWithDependencies(byte num, @Qualifier("testParam") String name, String anotherValue) {
+        return (byte) 0;
+    }
+
     public String notBeanMethod() {
         return "not_bean";
     }
