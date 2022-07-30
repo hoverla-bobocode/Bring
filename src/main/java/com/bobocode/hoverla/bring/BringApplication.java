@@ -8,6 +8,7 @@ import com.bobocode.hoverla.bring.context.BeanDefinitionValidator;
 import com.bobocode.hoverla.bring.context.BeanInitializer;
 import com.bobocode.hoverla.bring.context.BeanScanner;
 import com.google.common.base.Strings;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
@@ -46,7 +47,7 @@ public class BringApplication {
      * @param packagesToScan packages to scan
      */
     public static ApplicationContext loadContext(String... packagesToScan) {
-        return getContext(packagesToScan);
+        return createContext(packagesToScan);
     }
 
     /**
@@ -56,18 +57,17 @@ public class BringApplication {
      * @param packagesToScan packages for scanning to define bean configs
      * @return instance of {@link ApplicationContextImpl}
      */
-    private static ApplicationContext getContext(String... packagesToScan)  {
-        // TODO: use this variable for scanners
-        String[] validatedPackages = validatePackagesToScan(packagesToScan);
+    private static ApplicationContext createContext(String... packagesToScan)  {
+        validatePackagesToScan(packagesToScan);
         // TODO: add initialization of scanners;
         List<BeanScanner> scanners = List.of();
 
         return new ApplicationContextImpl(scanners, new BeanDefinitionValidator(), new BeanInitializer());
     }
 
-    private static String[] validatePackagesToScan(String... packagesToScan) {
+    private static void validatePackagesToScan(String... packagesToScan) {
         String message = "Argument [packagesToScan] must contain at least one not null and not empty element";
-        if (packagesToScan == null || packagesToScan.length == 0) {
+        if (ArrayUtils.isEmpty(packagesToScan)) {
             throw new IllegalArgumentException(message);
         }
 
@@ -76,11 +76,8 @@ public class BringApplication {
                 .toArray(String[]::new);
         if (filteredPackages.length == 0) {
             throw new IllegalArgumentException(message);
-        } else {
-            return filteredPackages;
         }
     }
-
 
     /**
      * Creates instance of ApplicationContextBuilder class
@@ -110,9 +107,8 @@ public class BringApplication {
         public ApplicationContext build() {
             Logger logger = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
             logger.setLevel(logLevel != null ? logLevel : Level.INFO);
-            return getContext(packagesToScan);
+            return createContext(packagesToScan);
         }
-
     }
 
 }

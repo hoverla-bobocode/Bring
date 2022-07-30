@@ -2,10 +2,9 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.NoSuchBeanException;
 import com.bobocode.hoverla.bring.exception.NoUniqueBeanException;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
@@ -25,16 +24,15 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@TestInstance(value = TestInstance.Lifecycle.PER_CLASS)
 class ApplicationContextImplTest {
 
-    private ApplicationContext applicationContext;
-    private BeanScanner beanScannerOne;
-    private BeanScanner beanScannerTwo;
-    private BeanDefinitionValidator validator;
-    private BeanInitializer initializer;
+    private static ApplicationContext applicationContext;
+    private static BeanScanner beanScannerOne;
+    private static BeanScanner beanScannerTwo;
+    private static BeanDefinitionValidator validator;
+    private static BeanInitializer initializer;
 
-    @BeforeAll
+    @BeforeEach
     void init() {
         beanScannerOne = Mockito.mock(BeanScanner.class);
         beanScannerTwo = Mockito.mock(BeanScanner.class);
