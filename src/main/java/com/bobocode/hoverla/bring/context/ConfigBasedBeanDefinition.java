@@ -24,17 +24,15 @@ import static java.util.stream.Collectors.toMap;
  *
  * @see Bean @Bean
  * @see Configuration @Configuration
+ * @see AbstractBeanDefinition
  * @see BeanDefinition
  */
 @Slf4j
-public class ConfigBasedBeanDefinition implements BeanDefinition {
+public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
 
     private final Object configInstance;
+
     private final Method beanMethod;
-    private final String name;
-    private final Class<?> type;
-    private final Map<String, Class<?>> dependencies;
-    private Object instance;
 
     /**
      * During execution doesn't instantiate target bean,
@@ -47,7 +45,8 @@ public class ConfigBasedBeanDefinition implements BeanDefinition {
      * @throws NullPointerException                when any of arguments passed is null
      */
     public ConfigBasedBeanDefinition(Object configInstance, Method beanMethod) {
-        validate(configInstance, beanMethod);
+        Objects.requireNonNull(configInstance, "Configuration class instance is null");
+        Objects.requireNonNull(beanMethod, "Configuration bean method to create bean is null");
 
         log.debug("Creating {} from method '{}'", ConfigBasedBeanDefinition.class.getSimpleName(), beanMethod);
         this.configInstance = configInstance;
@@ -61,56 +60,6 @@ public class ConfigBasedBeanDefinition implements BeanDefinition {
 
         this.dependencies = resolveDependencies(beanMethod);
         log.trace("'{}' bean dependencies are {}", name, dependencies);
-    }
-
-    private void validate(Object configInstance, Method method) {
-        log.debug("Validating arguments passed to create ConfigBased");
-        Objects.requireNonNull(configInstance, "Configuration class instance is null");
-        Objects.requireNonNull(method, "Configuration method to create bean is null");
-    }
-
-    /**
-     * See {@link BeanDefinition#name()}.
-     * <p>This name is either equal to target bean method name or to name specified in {@link Bean} annotation.</p>
-     *
-     * @return name of current {@link BeanDefinition}.
-     */
-    @Override
-    public String name() {
-        return name;
-    }
-
-    /**
-     * See {@link BeanDefinition#type()}
-     * <p>Type is taken from target bean method return type.</p>
-     *
-     * @return type of current {@link BeanDefinition}.
-     */
-    @Override
-    public Class<?> type() {
-        return type;
-    }
-
-    /**
-     * See {@link BeanDefinition#dependencies()}.
-     * <p>Keys are taken from target bean method parameter names.</p>
-     * <p>Values are taken from target bean method parameter types.</p>
-     *
-     * @return map of names and types of dependent {@link BeanDefinition}s.
-     */
-    @Override
-    public Map<String, Class<?>> dependencies() {
-        return dependencies;
-    }
-
-    /**
-     * See {@link BeanDefinition#isInstantiated()}
-     *
-     * @return {@code true} if current {@link ConfigBasedBeanDefinition#instance} is not null, {@code false} otherwise.
-     */
-    @Override
-    public boolean isInstantiated() {
-        return Objects.nonNull(instance);
     }
 
     /**
@@ -128,16 +77,14 @@ public class ConfigBasedBeanDefinition implements BeanDefinition {
     }
 
     /**
-     * See {@link BeanDefinition#getInstance()}.
+     * Resolves name of current {@link BeanDefinition}.
      *
-     * @return bean instance of current {@link BeanDefinition}.
-     * @throws NullPointerException when {@link ConfigBasedBeanDefinition#instance} is null.
+     * <p>This name will be either equal to target {@link Method#getName()} or to name specified
+     * in {@link Bean @Bean} annotation on this {@link Method}.</p>
+     *
+     * @param beanMethod {@link Method} annotated with {@link Bean @Bean}
+     * @return name of current {@link BeanDefinition}.
      */
-    @Override
-    public Object getInstance() {
-        return Objects.requireNonNull(instance, "Instance of %s has not been created yet".formatted(name));
-    }
-
     private String resolveName(Method beanMethod) {
         Bean annotation = beanMethod.getAnnotation(Bean.class);
         String beanName = annotation.name();
@@ -147,10 +94,27 @@ public class ConfigBasedBeanDefinition implements BeanDefinition {
         return beanName;
     }
 
+    /**
+     * Resolves type of current {@link BeanDefinition}.
+     *
+     * <p>This type equals to return type of target {@link Method} annotated with {@link Bean @Bean}.</p>
+     *
+     * @param beanMethod {@link Method} annotated with {@link Bean @Bean}
+     * @return type of current {@link BeanDefinition}.
+     */
     private Class<?> getType(Method beanMethod) {
         return beanMethod.getReturnType();
     }
 
+    /**
+     * Resolves dependencies of current {@link BeanDefinition} and store them in a {@link Map}.
+     *
+     * <p>Keys are taken from parameter names of target {@link Method} annotated with {@link Bean @Bean}.</p>
+     * <p>Values are taken from parameter types of target {@link Method} annotated with {@link Bean @Bean}.</p>
+     *
+     * @param beanMethod {@link Method} annotated with {@link Bean @Bean}
+     * @return {@link Map} of names and types of dependent {@link BeanDefinition}s.
+     */
     private Map<String, Class<?>> resolveDependencies(Method beanMethod) {
         return Arrays.stream(beanMethod.getParameters())
                 .collect(toMap(this::resolveParameterName, Parameter::getType));

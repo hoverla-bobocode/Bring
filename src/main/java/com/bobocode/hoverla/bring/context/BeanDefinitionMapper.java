@@ -7,15 +7,22 @@ import java.lang.reflect.Method;
 
 public class BeanDefinitionMapper {
 
-    public BeanDefinition mapToBeanDefinition(Class<?> scannedClass) {
-        return new ClassBasedBeanDefinition(scannedClass);
+    /**
+     * Maps Java class annotated with {@link Bean @Bean} to {@link BeanDefinition}.
+     *
+     * @param beanClass instance of {@link Class} annotated with {@link Bean @Bean} annotation.
+     * @return instance of {@link ClassBasedBeanDefinition} via polymorphic {@link BeanDefinition} reference
+     */
+    public BeanDefinition mapToBeanDefinition(Class<?> beanClass) {
+        return new ClassBasedBeanDefinition(beanClass);
     }
 
     /**
-     * Maps bean configuration class instance and its bean method to {@link BeanDefinition}
+     * Maps instance of Java class annotated with {@link Configuration @Configuration}
+     * and its {@link Method} annotated with {@link Bean @Bean} to {@link BeanDefinition}
      *
-     * @param configInstance beans config class marked with {@link Configuration @Configuration} instance
-     * @param beanMethod     bean method marked with {@link Bean @Bean}
+     * @param configInstance instance of a class annotated with {@link Configuration @Configuration}
+     * @param beanMethod     instance of a method annotated with {@link Bean @Bean}
      * @return instance of {@link ConfigBasedBeanDefinition} via polymorphic {@link BeanDefinition} reference
      */
     public BeanDefinition mapToBeanDefinition(Object configInstance, Method beanMethod) {
