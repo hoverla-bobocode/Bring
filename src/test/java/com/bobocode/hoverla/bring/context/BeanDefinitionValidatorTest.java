@@ -59,10 +59,23 @@ class BeanDefinitionValidatorTest {
     @ParameterizedTest
     @EmptySource
     @ValueSource(strings = {" ", "with space", "name\n", "tab\namenamer"})
-    @DisplayName("Fails on name validation when it's empty, blank or contains space, new line, carriage return or tab symbols")
+    @DisplayName("Fails on name validation for bean when it's empty, blank or contains space, new line, carriage return or tab symbols")
     void beanNameIsIncorrect(String name) {
-        String expectedMessage = "Bean name for java.lang.String class is incorrect. Bean name must not be empty, or contain carriage return, new line or tab symbols";
+        String expectedMessage = "Bean name for java.lang.String class is incorrect. It must not be empty, or contain carriage return, new line, space or tab symbols";
         BeanDefinition beanDefinition = prepareDefinition(name, String.class);
+        beanDefinitionList = List.of(beanDefinition);
+
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+    }
+
+    @ParameterizedTest
+    @EmptySource
+    @ValueSource(strings = {" ", "with space", "name\n", "tab\namenamer"})
+    @DisplayName("Fails on dependency name validation when it's empty, blank or contains space, new line, carriage return or tab symbols")
+    void dependencyNameIsIncorrect(String name) {
+        String expectedMessage = "Dependency name for java.lang.Integer class is incorrect. It must not be empty, or contain carriage return, new line, space or tab symbols";
+        BeanDefinition beanDefinition = prepareDefinition(BD1, String.class);
+        beanDefinition.dependencies().put(name, Integer.class);
         beanDefinitionList = List.of(beanDefinition);
 
         assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
