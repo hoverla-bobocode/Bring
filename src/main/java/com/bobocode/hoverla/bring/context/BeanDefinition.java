@@ -5,11 +5,11 @@ import com.bobocode.hoverla.bring.annotation.Bean;
 import java.util.Map;
 
 /**
- * Describes a bean instance, which has name, type, dependencies and further information supplied by
+ * Describes a bean instance, which has {@code name}, {@code type}, {@code dependencies} and further information supplied by
  * concrete implementations.
  *
  * @see Bean @Bean
- * @see ConfigBasedBeanDefinition
+ * @see AbstractBeanDefinition
  */
 public interface BeanDefinition {
 

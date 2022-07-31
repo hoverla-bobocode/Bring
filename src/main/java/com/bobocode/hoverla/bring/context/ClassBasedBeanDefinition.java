@@ -8,8 +8,16 @@ import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Parameter;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toMap;
@@ -22,25 +30,23 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
  * <p>Requires instance of class marked with {@link Bean @Bean} annotation.</p>
  *
  * @see Bean
+ * @see AbstractBeanDefinition
  * @see BeanDefinition
  */
 @Slf4j
-public class ClassBasedBeanDefinition implements BeanDefinition {
+public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
 
     private static final String INSTANTIATION_EXCEPTION_MESSAGE = "'%s' bean can't be instantiated";
 
-    private Object instance;
-    private final String name;
-    private final Class<?> type;
-    private final Map<String, Class<?>> dependencies;
     private Constructor<?> constructor;
+
     private List<Field> injectionFields;
 
     /**
      * During execution doesn't instantiate target bean,
      * but parses all info such as name, type, dependencies. and preserves this info to be used later on.
      *
-     * @param beanClass instance of a class marked as {@link Bean @Bean}.
+     * @param beanClass instance of a class marked with {@link Bean @Bean}.
      * @throws BeanDefinitionConstructionException when an unexpected exception occurred during bean instantiation
      * @throws NullPointerException                when passed {@code beanClass} is null
      */
@@ -58,55 +64,6 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     }
 
     /**
-     * See {@link BeanDefinition#name()}.
-     * <p>This name is either equal to current bean {@link Class#getName()}
-     * or to name specified in {@link Bean} annotation.</p>
-     *
-     * @return name of current {@link BeanDefinition}.
-     */
-    @Override
-    public String name() {
-        return name;
-    }
-
-    /**
-     * See {@link BeanDefinition#type()}
-     * <p>Type is equal to current bean {@link Class}.</p>
-     *
-     * @return type of current {@link BeanDefinition}.
-     */
-    @Override
-    public Class<?> type() {
-        return type;
-    }
-
-    /**
-     * See {@link BeanDefinition#dependencies()}.
-     *
-     * <p>Keys are taken from {@link Qualifier @Qualifier} annotation on dependency constructor {@link Parameter}
-     * or {@link Field} annotated with {@link Inject @Inject}.
-     * In case annotation is not present key will be equal to {@link Class#getName()} of a corresponding dependency.</p>
-     *
-     * <p>Values are taken from {@link Parameter#getType()} or {@link Field#getType()} of a corresponding dependency.</p>
-     *
-     * @return map of names and types of dependent {@link BeanDefinition}s.
-     */
-    @Override
-    public Map<String, Class<?>> dependencies() {
-        return dependencies;
-    }
-
-    /**
-     * See {@link BeanDefinition#isInstantiated()}
-     *
-     * @return {@code true} if current {@link ClassBasedBeanDefinition#instance} is not null, {@code false} otherwise.
-     */
-    @Override
-    public boolean isInstantiated() {
-        return Objects.nonNull(instance);
-    }
-
-    /**
      * See {@link BeanDefinition#instantiate(BeanDefinition...)}
      *
      * @param dependencies {@link BeanDefinition} objects that are treated as required dependencies for
@@ -121,16 +78,14 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
     }
 
     /**
-     * See {@link BeanDefinition#getInstance()}.
+     * Resolves name of current {@link BeanDefinition}.
      *
-     * @return bean instance of current {@link BeanDefinition}.
-     * @throws NullPointerException when {@link ClassBasedBeanDefinition#instance} is null.
+     * <p>This name will be either equal to current bean {@link Class#getName()} or to
+     * name specified in {@link Bean} annotation.</p>
+     *
+     * @param beanClass instance of a class marked with {@link Bean @Bean}.
+     * @return name of current {@link BeanDefinition}.
      */
-    @Override
-    public Object getInstance() {
-        return Objects.requireNonNull(instance, "Instance of %s has not been created yet".formatted(name));
-    }
-
     private String resolveName(Class<?> beanClass) {
         Bean annotation = beanClass.getAnnotation(Bean.class);
         String beanName = annotation.name();
@@ -140,6 +95,18 @@ public class ClassBasedBeanDefinition implements BeanDefinition {
         return beanName;
     }
 
+    /**
+     * Resolves dependencies of current {@link BeanDefinition} and store them in a {@link Map}.
+     *
+     * <p>Keys are taken from {@link Qualifier @Qualifier} annotation on dependency constructor {@link Parameter}
+     * or {@link Field} annotated with {@link Inject @Inject}.</p>
+     *
+     * <p>In case annotation is not present key will be equal to {@link Class#getName()} of a corresponding dependency.</p>
+     *
+     * <p>Values are taken from {@link Parameter#getType()} or {@link Field#getType()} of a corresponding dependency.</p>
+     *
+     * @return {@link Map} of names and types of dependent {@link BeanDefinition}s.
+     */
     private Map<String, Class<?>> resolveDependencies(Class<?> beanClass) {
         Map<String, Class<?>> resolvedDependencies = new HashMap<>();
         resolvedDependencies.putAll(resolveConstructorDependencies(beanClass));
