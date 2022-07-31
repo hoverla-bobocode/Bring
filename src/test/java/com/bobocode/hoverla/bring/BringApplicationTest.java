@@ -6,7 +6,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 
-import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -28,11 +27,4 @@ class BringApplicationTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(EXCEPTION_MESSAGE);
     }
-
-    @Test
-    @DisplayName("No exception was thrown when packages to scan were provided")
-    void providePackagesToScan() {
-        assertThatNoException().isThrownBy(() -> BringApplication.loadContext("com.bobocode.hoverla.bring"));
-    }
-
 }

@@ -4,6 +4,11 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.bobocode.hoverla.bring.context.ApplicationContext;
 import com.bobocode.hoverla.bring.context.ApplicationContextImpl;
+import com.bobocode.hoverla.bring.context.BeanAnnotationClassValidator;
+import com.bobocode.hoverla.bring.context.BeanAnnotationScanner;
+import com.bobocode.hoverla.bring.context.BeanConfigurationClassScanner;
+import com.bobocode.hoverla.bring.context.BeanConfigurationClassValidator;
+import com.bobocode.hoverla.bring.context.BeanDefinitionMapper;
 import com.bobocode.hoverla.bring.context.BeanDefinitionValidator;
 import com.bobocode.hoverla.bring.context.BeanInitializer;
 import com.bobocode.hoverla.bring.context.BeanScanner;
@@ -57,12 +62,19 @@ public class BringApplication {
      * @param packagesToScan packages for scanning to define bean configs
      * @return instance of {@link ApplicationContextImpl}
      */
-    private static ApplicationContext createContext(String... packagesToScan)  {
+    private static ApplicationContext createContext(String... packagesToScan) {
         validatePackagesToScan(packagesToScan);
-        // TODO: add initialization of scanners;
-        List<BeanScanner> scanners = List.of();
 
-        return new ApplicationContextImpl(scanners, new BeanDefinitionValidator(), new BeanInitializer());
+        BeanDefinitionMapper beanDefinitionMapper = new BeanDefinitionMapper();
+        BeanAnnotationClassValidator beanAnnotationClassValidator = new BeanAnnotationClassValidator();
+        BeanAnnotationScanner beanAnnotationScanner = new BeanAnnotationScanner(beanAnnotationClassValidator, beanDefinitionMapper, packagesToScan);
+        BeanConfigurationClassValidator beanConfigurationClassValidator = new BeanConfigurationClassValidator();
+        BeanConfigurationClassScanner beanConfigurationClassScanner = new BeanConfigurationClassScanner(beanConfigurationClassValidator, beanDefinitionMapper, packagesToScan);
+
+        List<BeanScanner> scanners = List.of(beanAnnotationScanner, beanConfigurationClassScanner);
+        BeanDefinitionValidator beanDefinitionValidator = new BeanDefinitionValidator();
+        BeanInitializer initializer = new BeanInitializer();
+        return new ApplicationContextImpl(scanners, beanDefinitionValidator, initializer);
     }
 
     private static void validatePackagesToScan(String... packagesToScan) {
@@ -90,7 +102,7 @@ public class BringApplication {
     /**
      *
      */
-    static class ApplicationContextBuilder {
+    public static class ApplicationContextBuilder {
         private Level logLevel;
         private String[] packagesToScan;
 
