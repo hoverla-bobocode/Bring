@@ -2,6 +2,7 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.BeanValidationException;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,8 +47,8 @@ import static org.apache.commons.lang3.StringUtils.containsAny;
  *         <li>When Bean definition was found, start validating on circular dependency {@link #checkCircularDependency}
  *         root bean definition and found bean definition.</li>
  *         <li>During circular validation, check if the dependencies of the found bean contain the root bean. After that,
- *         check that dependencies of found bean are in requiredDependencyNames {@link #checkInnerDependency}, if no -
- *         put it in. Find BeanDefinition for these dependencies in {@link #checkInnerDependencies} and make recursive
+ *         check that dependencies of found bean are in requiredDependencyNames, if no - put it in.
+ *         Find BeanDefinition for these dependencies in {@link #checkInnerDependencies} and make recursive
  *         call {@link #checkCircularDependency} each found beans</li>
  *     </ol>
  *     </li>
@@ -61,6 +62,8 @@ public class BeanDefinitionValidator {
     private static final String DIFFERENT_TYPES_IN_DEPENDENCIES = "Found dependency type is not assignable from the required type - required %s but found - %s";
     private static final String MULTIPLE_BEANS_WITH_TYPE = "Found more than 1 bean with type: %s in context";
     private static final String NOT_FOUND_BEANS = "Unable to find bean with name - `%s` and type - %s in context";
+    private static final String BEAN = "Bean";
+    private static final String DEPENDENCY = "Dependency";
 
     private static final CharSequence[] ILLEGAL_CHARACTERS = {SPACE, LF, CR, "\t"};
 
@@ -77,20 +80,22 @@ public class BeanDefinitionValidator {
         Objects.requireNonNull(beanDefinitions, BEAN_DEFINITION_LIST_IS_NULL);
         log.info("Bean validation started. Received {} bean definitions", beanDefinitions.size());
 
-        List<String> duplicateNames = beanDefinitions.stream()
-                .collect(groupingBy(BeanDefinition::name, counting()))
-                .entrySet()
-                .stream()
-                .filter(entry -> entry.getValue() > 1)
-                .map(Map.Entry::getKey)
-                .toList();
-        if (!duplicateNames.isEmpty()) {
-            throw new BeanValidationException(DUPLICATE_BEAN_NAMES.formatted(duplicateNames));
-        }
+        validateDuplicateNames(beanDefinitions);
 
         for (BeanDefinition beanDefinition : beanDefinitions) {
-            validateName(beanDefinition.name(), beanDefinition.type(), "Bean");
+            validateName(beanDefinition.name(), beanDefinition.type(), BEAN);
             validateDependencies(beanDefinition, beanDefinitions);
+        }
+    }
+
+    private void validateDuplicateNames(List<BeanDefinition> beanDefinitions) {
+        Map<String, Long> nameCountMap = beanDefinitions.stream()
+                .collect(groupingBy(BeanDefinition::name, counting()));
+
+        Set<String> duplicateNames = Maps.filterValues(nameCountMap, nameCount -> nameCount > 1).keySet();
+
+        if (!duplicateNames.isEmpty()) {
+            throw new BeanValidationException(DUPLICATE_BEAN_NAMES.formatted(duplicateNames));
         }
     }
 
@@ -120,8 +125,8 @@ public class BeanDefinitionValidator {
         for (Map.Entry<String, Class<?>> dependencyEntry : currentDependencies.entrySet()) {
             String dependencyName = dependencyEntry.getKey();
             Class<?> dependencyType = dependencyEntry.getValue();
-            validateName(dependencyName, dependencyType, "Dependency");
 
+            validateName(dependencyName, dependencyType, DEPENDENCY);
             validateDependency(currentBeanDefinition, allDefinitions, requiredDependencyNames, dependencyEntry);
         }
     }
@@ -151,6 +156,11 @@ public class BeanDefinitionValidator {
             foundDependency = definitionByName.get();
             checkTypeMatching(dependencyType, foundDependency);
         } else {
+            // Check whether @qualifier contains a non-existing bean name
+            if (!dependencyName.equals(dependencyType.getName())) {
+                throw new BeanValidationException(NOT_FOUND_BEANS.formatted(dependencyName, dependencyType.getName()));
+            }
+
             log.warn("Was not able to find bean by name `{}` - trying to find by type: {}",
                     dependencyName, dependencyType.getName());
             foundDependency = tryFindByType(dependencyType, allDefinitions, dependencyName);
@@ -173,30 +183,22 @@ public class BeanDefinitionValidator {
         String rootBeanName = rootBean.name();
         String foundDependencyName = foundDependency.name();
 
-        if (innerDependencies.containsKey(rootBeanName)) {
-            String message = buildCircularExceptionMessage(foundDependency, requiredDependencyNames);
-            throw new BeanValidationException(message.formatted(rootBeanName, foundDependencyName));
-        }
+        innerDependencies.computeIfPresent(rootBeanName, (ig, ig2) -> {
+            throw validationException(foundDependency, requiredDependencyNames);
+        });
 
         for (Map.Entry<String, Class<?>> innerDependencyEntry : innerDependencies.entrySet()) {
             String dependencyName = innerDependencyEntry.getKey();
             Class<?> dependencyType = innerDependencyEntry.getValue();
-            validateName(dependencyName, dependencyType, "Dependency");
 
-            checkInnerDependency(foundDependency, requiredDependencyNames, innerDependencyEntry);
+            validateName(dependencyName, dependencyType, DEPENDENCY);
+
+            requiredDependencyNames.computeIfPresent(dependencyName, (ig, ig2) -> {
+                throw validationException(foundDependency, requiredDependencyNames);
+            });
 
             requiredDependencyNames.put(foundDependencyName, innerDependencies.keySet());
             checkInnerDependencies(rootBean, innerDependencyEntry, allDefinitions, requiredDependencyNames);
-        }
-    }
-
-    private void checkInnerDependency(BeanDefinition foundDependency,
-                                      Map<String, Set<String>> requiredDependencyNames,
-                                      Map.Entry<String, Class<?>> innerDependencyEntry) {
-        String innerDependencyName = innerDependencyEntry.getKey();
-        if (requiredDependencyNames.containsKey(innerDependencyName)) {
-            String message = buildCircularExceptionMessage(foundDependency, requiredDependencyNames);
-            throw new BeanValidationException(message);
         }
     }
 
@@ -210,9 +212,16 @@ public class BeanDefinitionValidator {
         checkCircularDependency(root, foundInnerDependency, allDefinitions, requiredDependencyNames);
     }
 
+    private BeanValidationException validationException(BeanDefinition dependency,
+                                                        Map<String, Set<String>> requiredDependencyNames) {
+        String message = buildCircularExceptionMessage(dependency, requiredDependencyNames);
+        return new BeanValidationException(message);
+    }
+
     private String buildCircularExceptionMessage(BeanDefinition found,
                                                  Map<String, Set<String>> requiredDependencies) {
-        StringBuilder message = new StringBuilder("Oops. Circular dependency occurs with " + found.name() + "\n");
+        StringBuilder message = new StringBuilder("Oops. Circular dependency occurs with bean: " + found.name() + " - "
+                + found.type().getName() + "\n");
         String template = "%s depends on: %s";
         for (Map.Entry<String, Set<String>> dep : requiredDependencies.entrySet()) {
             message.append(template.formatted(dep.getKey(), dep.getValue())).append("\n");
