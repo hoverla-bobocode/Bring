@@ -32,13 +32,14 @@ import static org.apache.commons.lang3.StringUtils.containsAny;
  * How it validates:
  *     <li>The first step is checking the list for null</li>
  *     <li>The next one is validation for duplicate names in the list</li>
- *     <li>After that, validate bean definition name {@link #validateBeanName}</li>
+ *     <li>After that, validate bean definition name {@link #validateName}</li>
  *     <li>Then start checking dependencies for each bean definition {@link #validateDependencies}:
  *     <ol>
  *         <li>Create the {@code Map<String, List<String>> requiredDependencyNames} for this bean definition.
  *         Key - bean name; value - list of dependencies for this bean. This map contains all dependencies which are
  *         needed for creating the bean of the current bean definition</li>
  *         <li>After that, check each dependency {@link #validateDependency}</li>
+ *         <li>Next validate dependency name {@link #validateName}</li>
  *         <li>Finding required BeanDefinition for dependency via: {@link #resolveDependency}. This method first finds
  *         by name, if exists set it, else find it by type. Throws an exception if was not found. Finding by name is also
  *         validated by type matching {@link #checkTypeMatching}</li>
@@ -56,7 +57,7 @@ public class BeanDefinitionValidator {
 
     private static final String BEAN_DEFINITION_LIST_IS_NULL = "Bean definition list is null";
     private static final String DUPLICATE_BEAN_NAMES = "Context contains beans with duplicate names: %s";
-    private static final String INCORRECT_BEAN_NAME = "Bean name for %s class is incorrect. Bean name must not be empty, or contain carriage return, new line or tab symbols";
+    private static final String INCORRECT_BEAN_NAME = "%s name for %s class is incorrect. It must not be empty, or contain carriage return, new line, space or tab symbols";
     private static final String DIFFERENT_TYPES_IN_DEPENDENCIES = "Found dependency type is not assignable from the required type - required %s but found - %s";
     private static final String MULTIPLE_BEANS_WITH_TYPE = "Found more than 1 bean with type: %s in context";
     private static final String NOT_FOUND_BEANS = "Unable to find bean with name - `%s` and type - %s in context";
@@ -88,18 +89,17 @@ public class BeanDefinitionValidator {
         }
 
         for (BeanDefinition beanDefinition : beanDefinitions) {
-            validateBeanName(beanDefinition);
+            validateName(beanDefinition.name(), beanDefinition.type(), "Bean");
             validateDependencies(beanDefinition, beanDefinitions);
         }
     }
 
-    private void validateBeanName(BeanDefinition beanDefinition) {
-        String name = beanDefinition.name();
-        String type = beanDefinition.type().getName();
-        log.trace("Validating name for bean definition: {} - {}", name, type);
+    private void validateName(String name, Class<?> type, String checkInstance) {
+        String typeName = type.getName();
+        log.trace("Validating name for {}: {} - {}", checkInstance, name, typeName);
 
         if (name.isBlank() || containsAny(name, ILLEGAL_CHARACTERS)) {
-            throw new BeanValidationException(INCORRECT_BEAN_NAME.formatted(type));
+            throw new BeanValidationException(INCORRECT_BEAN_NAME.formatted(checkInstance, typeName));
         }
     }
 
@@ -118,6 +118,10 @@ public class BeanDefinitionValidator {
         requiredDependencyNames.put(beanDefName, dependencyNames);
 
         for (Map.Entry<String, Class<?>> dependencyEntry : currentDependencies.entrySet()) {
+            String dependencyName = dependencyEntry.getKey();
+            Class<?> dependencyType = dependencyEntry.getValue();
+            validateName(dependencyName, dependencyType, "Dependency");
+
             validateDependency(currentBeanDefinition, allDefinitions, requiredDependencyNames, dependencyEntry);
         }
     }
@@ -128,7 +132,7 @@ public class BeanDefinitionValidator {
                                     Map.Entry<String, Class<?>> dependencyEntry) {
         String dependencyName = dependencyEntry.getKey();
         Class<?> dependencyType = dependencyEntry.getValue();
-        log.trace("Checking dependency {} - {}", dependencyName, dependencyType.getName());
+        log.trace("Checking dependency: {} - {}", dependencyName, dependencyType.getName());
 
         BeanDefinition foundDependency = resolveDependency(dependencyName, dependencyType, allDefinitions);
         checkCircularDependency(currentBeanDefinition, foundDependency, allDefinitions, requiredDependencyNames);
@@ -175,6 +179,10 @@ public class BeanDefinitionValidator {
         }
 
         for (Map.Entry<String, Class<?>> innerDependencyEntry : innerDependencies.entrySet()) {
+            String dependencyName = innerDependencyEntry.getKey();
+            Class<?> dependencyType = innerDependencyEntry.getValue();
+            validateName(dependencyName, dependencyType, "Dependency");
+
             checkInnerDependency(foundDependency, requiredDependencyNames, innerDependencyEntry);
 
             requiredDependencyNames.put(foundDependencyName, innerDependencies.keySet());
