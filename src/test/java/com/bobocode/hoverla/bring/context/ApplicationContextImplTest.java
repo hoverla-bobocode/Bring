@@ -5,7 +5,6 @@ import com.bobocode.hoverla.bring.exception.NoUniqueBeanException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -21,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,20 +32,21 @@ class ApplicationContextImplTest {
     private static BeanScanner beanScannerTwo;
     private static BeanDefinitionValidator validator;
     private static BeanInitializer initializer;
+    private static LateBeanCreator lateBeanCreator;
 
     @BeforeEach
     void init() {
-        beanScannerOne = Mockito.mock(BeanScanner.class);
-        beanScannerTwo = Mockito.mock(BeanScanner.class);
+        beanScannerOne = mock(BeanScanner.class);
+        beanScannerTwo = mock(BeanScanner.class);
         List<BeanScanner> beanScannerList = Arrays.asList(beanScannerOne, beanScannerTwo);
 
-        validator = Mockito.mock(BeanDefinitionValidator.class);
+        validator = mock(BeanDefinitionValidator.class);
+        initializer = mock(BeanInitializer.class);
+        lateBeanCreator = mock(LateBeanCreator.class);
 
-        initializer = Mockito.mock(BeanInitializer.class);
-
-        BeanDefinition beanDefinitionStringOne = Mockito.mock(BeanDefinition.class);
-        BeanDefinition beanDefinitionStringTwo = Mockito.mock(BeanDefinition.class);
-        BeanDefinition beanDefinitionInteger = Mockito.mock(BeanDefinition.class);
+        BeanDefinition beanDefinitionStringOne = mock(BeanDefinition.class);
+        BeanDefinition beanDefinitionStringTwo = mock(BeanDefinition.class);
+        BeanDefinition beanDefinitionInteger = mock(BeanDefinition.class);
 
         when(beanScannerOne.scan()).thenReturn(Arrays.asList(beanDefinitionStringOne, beanDefinitionInteger));
         when(beanScannerTwo.scan()).thenReturn(Collections.singletonList(beanDefinitionStringTwo));
@@ -61,7 +63,7 @@ class ApplicationContextImplTest {
         doReturn(String.class).when(beanDefinitionStringTwo).type();
         when(beanDefinitionStringTwo.getInstance()).thenReturn("String bean");
 
-        applicationContext = new ApplicationContextImpl(beanScannerList, validator, initializer);
+        applicationContext = new ApplicationContextImpl(beanScannerList, validator, lateBeanCreator, initializer);
     }
 
     @Test
@@ -72,7 +74,7 @@ class ApplicationContextImplTest {
 
         verify(validator).validate(anyList());
 
-        verify(initializer).initialize(any());
+        verify(initializer).initializeBeans(any());
     }
 
     @Test
@@ -150,6 +152,43 @@ class ApplicationContextImplTest {
     @Test
     @DisplayName("Context contain bean with provided name")
     void containsBeans() {
-        assertTrue(applicationContext.containsBean("Integer"));
+        assertContainsBean("Integer");
+    }
+
+    @Test
+    @DisplayName("Registers new bean by type")
+    void registersByType() {
+        Class<Thread> beanType = Thread.class;
+        String name = beanType.getName();
+        BeanDefinition beanDefinition = mock(BeanDefinition.class);
+        when(lateBeanCreator.createLateBean(beanType)).thenReturn(beanDefinition);
+        when(beanDefinition.name()).thenReturn(name);
+
+        applicationContext.register(beanType);
+
+        verify(validator).validateBeanDefinition(eq(beanDefinition), any());
+        verify(initializer).initializeBean(eq(beanDefinition), any());
+        assertContainsBean(name);
+    }
+
+    @Test
+    @DisplayName("Registers new bean by name and type")
+    void registersByNameAndType() {
+        String name = "threadBean";
+        Class<Thread> beanType = Thread.class;
+        BeanDefinition beanDefinition = mock(BeanDefinition.class);
+        when(lateBeanCreator.createLateBean(name, beanType)).thenReturn(beanDefinition);
+        when(beanDefinition.name()).thenReturn(name);
+
+        applicationContext.register(name, beanType);
+
+        verify(validator).validateBeanDefinition(eq(beanDefinition), any());
+        verify(initializer).initializeBean(eq(beanDefinition), any());
+        assertContainsBean(name);
+    }
+
+    private void assertContainsBean(String beanName) {
+        assertTrue(applicationContext.containsBean(beanName),
+                () -> "'%s' bean is not found in applicaion context".formatted(beanName));
     }
 }

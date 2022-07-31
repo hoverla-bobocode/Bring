@@ -2,6 +2,7 @@ package com.bobocode.hoverla.bring.integration;
 
 import com.bobocode.hoverla.bring.BringApplication;
 import com.bobocode.hoverla.bring.context.ApplicationContext;
+import com.bobocode.hoverla.bring.integration.beans.TestBean2;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,12 +22,18 @@ class BringPositiveIntegrationTest {
     @Test
     @DisplayName("Successfully loads context with all beans")
     void doesNotThrowExceptionOnStartUp() {
+
+        applicationContext.register("lateTestBean2", TestBean2.class);
+        applicationContext.register("lateTestBean1", TestBean2.class);
+
+        assertContainsBean("lateTestBean2");
         assertContainsBean("testBean1");
         assertContainsBean("testBean1FromConfig");
         assertContainsBean("testBean2FromConfig");
         assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean2");
         assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean3");
         assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean4");
+
     }
 
     private void assertContainsBean(String beanName) {

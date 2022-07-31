@@ -88,9 +88,13 @@ public class BeanDefinitionValidator {
         }
 
         for (BeanDefinition beanDefinition : beanDefinitions) {
-            validateBeanName(beanDefinition);
-            validateDependencies(beanDefinition, beanDefinitions);
+            validateBeanDefinition(beanDefinition, beanDefinitions);
         }
+    }
+
+    public void validateBeanDefinition(BeanDefinition beanDefinition, List<BeanDefinition> beanDefinitions) {
+        validateBeanName(beanDefinition);
+        validateDependencies(beanDefinition, beanDefinitions);
     }
 
     private void validateBeanName(BeanDefinition beanDefinition) {
@@ -132,6 +136,7 @@ public class BeanDefinitionValidator {
 
         BeanDefinition foundDependency = resolveDependency(dependencyName, dependencyType, allDefinitions);
         checkCircularDependency(currentBeanDefinition, foundDependency, allDefinitions, requiredDependencyNames);
+        beanDefinitionCache.clear();
     }
 
     private BeanDefinition resolveDependency(String dependencyName, Class<?> dependencyType,

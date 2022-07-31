@@ -25,15 +25,6 @@ public interface ApplicationContext extends BeanFactory {
     <T> void register(String name, Class<T> beanType);
 
     /**
-     * Adds provided beans to the context.
-     *
-     * @param beanTypes type of bean to be instantiated and registered
-     * @throws BeanAlreadyExistsException if at least one bean with a name equals to bean class type full name e.g.
-     *                                    com.package.BeanType exists
-     */
-    void register(Class<?>... beanTypes);
-
-    /**
      * Adds bean to the context. Class added here is not supposed and not forced
      * to be marked as {@link Bean} initially
      *

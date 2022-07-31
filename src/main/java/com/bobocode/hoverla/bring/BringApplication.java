@@ -12,6 +12,7 @@ import com.bobocode.hoverla.bring.context.BeanDefinitionMapper;
 import com.bobocode.hoverla.bring.context.BeanDefinitionValidator;
 import com.bobocode.hoverla.bring.context.BeanInitializer;
 import com.bobocode.hoverla.bring.context.BeanScanner;
+import com.bobocode.hoverla.bring.context.LateBeanCreator;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
@@ -74,7 +75,8 @@ public class BringApplication {
         List<BeanScanner> scanners = List.of(beanAnnotationScanner, beanConfigurationClassScanner);
         BeanDefinitionValidator beanDefinitionValidator = new BeanDefinitionValidator();
         BeanInitializer initializer = new BeanInitializer();
-        return new ApplicationContextImpl(scanners, beanDefinitionValidator, initializer);
+        LateBeanCreator lateBeanCreator = new LateBeanCreator(beanAnnotationClassValidator, beanDefinitionMapper);
+        return new ApplicationContextImpl(scanners, beanDefinitionValidator, lateBeanCreator, initializer);
     }
 
     private static void validatePackagesToScan(String... packagesToScan) {

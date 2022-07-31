@@ -80,7 +80,7 @@ public class BeanAnnotationClassValidator {
         }
     }
 
-    private void validateClass(Class<?> beanClass) {
+    public void validateClass(Class<?> beanClass) {
         UNSUPPORTED_TYPE_PREDICATE_MAP.entrySet()
                 .stream()
                 .filter(predicateEntry -> predicateEntry.getValue().test(beanClass))
