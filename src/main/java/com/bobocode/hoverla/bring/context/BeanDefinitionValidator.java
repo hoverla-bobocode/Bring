@@ -73,7 +73,7 @@ public class BeanDefinitionValidator {
      *                                 new line or tab symbols, found by name bean of dependency is not suitable by type,
      *                                 circular dependency, application context doesn't contain the required bean
      */
-    public void validate(List<BeanDefinition> beanDefinitions) {
+    public void validateBeanDefinitions(List<BeanDefinition> beanDefinitions) {
         Objects.requireNonNull(beanDefinitions, BEAN_DEFINITION_LIST_IS_NULL);
         log.info("Bean validation started. Received {} bean definitions", beanDefinitions.size());
 
@@ -89,9 +89,13 @@ public class BeanDefinitionValidator {
         }
 
         for (BeanDefinition beanDefinition : beanDefinitions) {
-            validateName(beanDefinition.name(), beanDefinition.type(), "Bean");
-            validateDependencies(beanDefinition, beanDefinitions);
+            validateBeanDefinition(beanDefinition, beanDefinitions);
         }
+    }
+
+    public void validateBeanDefinition(BeanDefinition beanDefinition, List<BeanDefinition> beanDefinitions) {
+        validateName(beanDefinition.name(), beanDefinition.type(), "Bean");
+        validateDependencies(beanDefinition, beanDefinitions);
     }
 
     private void validateName(String name, Class<?> type, String checkInstance) {
@@ -136,6 +140,7 @@ public class BeanDefinitionValidator {
 
         BeanDefinition foundDependency = resolveDependency(dependencyName, dependencyType, allDefinitions);
         checkCircularDependency(currentBeanDefinition, foundDependency, allDefinitions, requiredDependencyNames);
+        beanDefinitionCache.clear();
     }
 
     private BeanDefinition resolveDependency(String dependencyName, Class<?> dependencyType,

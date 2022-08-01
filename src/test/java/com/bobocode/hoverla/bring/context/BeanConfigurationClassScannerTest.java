@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,7 @@ class BeanConfigurationClassScannerTest {
         List<BeanDefinition> beanDefinitions = scanner.scan();
 
         verify(validator, never()).validate(any());
-        verify(mapper, never()).mapToBeanDefinition(any(), any());
+        verify(mapper, never()).mapToBeanDefinition(any(), any(Method.class));
         assertThat(beanDefinitions).isEmpty();
     }
 
@@ -55,7 +56,7 @@ class BeanConfigurationClassScannerTest {
         List<BeanDefinition> beanDefinitions = scanner.scan();
 
         verify(validator, never()).validate(any());
-        verify(mapper, never()).mapToBeanDefinition(any(), any());
+        verify(mapper, never()).mapToBeanDefinition(any(), any(Method.class));
         assertThat(beanDefinitions).isEmpty();
     }
 }

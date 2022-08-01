@@ -54,7 +54,7 @@ class BeanInitializerTest {
         BeanInitializer beanInitializer = new BeanInitializer();
 
         //When
-        beanInitializer.initialize(beanDefinitionTable);
+        beanInitializer.initializeBeans(beanDefinitionTable);
 
         //Then
         for (BeanDefinition beanDefinition : beanDefinitionTable.values()) {

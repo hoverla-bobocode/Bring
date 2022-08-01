@@ -24,14 +24,14 @@ public class BeanInitializer {
      *
      * @param beanDefinitionsTable {@link Table} with all {@link BeanDefinition} objects handled by current context.
      */
-    public void initialize(Table<String, Class<?>, BeanDefinition> beanDefinitionsTable) {
+    public void initializeBeans(Table<String, Class<?>, BeanDefinition> beanDefinitionsTable) {
         log.debug("Bean initialization started");
         Collection<BeanDefinition> beanDefinitions = beanDefinitionsTable.values();
-        beanDefinitions.forEach(beanDefinition -> doInitialize(beanDefinition, beanDefinitionsTable));
+        beanDefinitions.forEach(beanDefinition -> initializeBean(beanDefinition, beanDefinitionsTable));
     }
 
-    private void doInitialize(BeanDefinition definitionToInitialize,
-                              Table<String, Class<?>, BeanDefinition> beanDefinitionsTable) {
+    public void initializeBean(BeanDefinition definitionToInitialize,
+                               Table<String, Class<?>, BeanDefinition> beanDefinitionsTable) {
         if (definitionToInitialize.isInstantiated()) {
             return;
         }
@@ -49,7 +49,7 @@ public class BeanInitializer {
         log.trace("Found {} dependencies for {}", numberOfDependencies, beanName);
         for (BeanDefinition beanDependency : beanDependencies) {
             if (!beanDependency.isInstantiated()) {
-                doInitialize(beanDependency, beanDefinitionsTable);
+                initializeBean(beanDependency, beanDefinitionsTable);
             }
         }
         definitionToInitialize.instantiate(beanDependencies);

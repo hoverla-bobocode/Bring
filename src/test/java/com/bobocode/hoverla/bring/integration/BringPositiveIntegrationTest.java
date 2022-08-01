@@ -21,6 +21,18 @@ class BringPositiveIntegrationTest {
     @Test
     @DisplayName("Successfully loads context with all beans")
     void loadsContextWithAllBeans() {
+        applicationContext.register();
+        assertContainsBean("testBean1");
+        assertContainsBean("testBean1FromConfig");
+        assertContainsBean("testBean2FromConfig");
+        assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean2");
+        assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean3");
+        assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean4");
+    }
+
+    @Test
+    @DisplayName("Successfully loads context with all beans")
+    void loadsContextWithAllBeans() {
         assertContainsBean("testBean1");
         assertContainsBean("testBean1FromConfig");
         assertContainsBean("testBean2FromConfig");

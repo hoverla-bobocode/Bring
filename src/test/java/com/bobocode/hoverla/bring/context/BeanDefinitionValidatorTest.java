@@ -44,14 +44,14 @@ class BeanDefinitionValidatorTest {
         BeanDefinition beanDef1 = prepareDefinition(BD1, String.class, beanDef2, beanDef3);
         beanDefinitionList = List.of(beanDef1, beanDef2, beanDef3, beanDef4);
 
-        assertDoesNotThrow(() -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertDoesNotThrow(() -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
     @DisplayName("Fails when bean definition list is null")
     void validationWhenListIsNull() {
         String expectedMessage = "Bean definition list is null";
-        Assertions.assertThatThrownBy(() -> beanDefinitionValidator.validate(null))
+        Assertions.assertThatThrownBy(() -> beanDefinitionValidator.validateBeanDefinitions(null))
                 .isExactlyInstanceOf(NullPointerException.class)
                 .hasMessage(expectedMessage);
     }
@@ -65,7 +65,7 @@ class BeanDefinitionValidatorTest {
         BeanDefinition beanDefinition = prepareDefinition(name, String.class);
         beanDefinitionList = List.of(beanDefinition);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @ParameterizedTest
@@ -78,7 +78,7 @@ class BeanDefinitionValidatorTest {
         beanDefinition.dependencies().put(name, Integer.class);
         beanDefinitionList = List.of(beanDefinition);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -89,7 +89,7 @@ class BeanDefinitionValidatorTest {
         BeanDefinition beanDef2 = prepareDefinition(BD1, String.class);
         beanDefinitionList = List.of(beanDef1, beanDef2);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -104,7 +104,7 @@ class BeanDefinitionValidatorTest {
 
         assertExceptionAndMessage(
                 expectedMessage.formatted(String.class.getName(), Integer.class.getName()),
-                () -> beanDefinitionValidator.validate(beanDefinitionList));
+                () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -123,7 +123,7 @@ class BeanDefinitionValidatorTest {
         beanDef3.dependencies().put(beanDef1.name(), beanDef1.type());
         beanDefinitionList = List.of(beanDef1, beanDef2, beanDef3);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -142,7 +142,7 @@ class BeanDefinitionValidatorTest {
         beanDef3.dependencies().put(beanDef2.name(), beanDef2.type());
         beanDefinitionList = List.of(beanDef1, beanDef2, beanDef3);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -165,7 +165,7 @@ class BeanDefinitionValidatorTest {
         beanDef4.dependencies().put(beanDef2.name(), beanDef2.type());
         beanDefinitionList = List.of(beanDef1, beanDef2, beanDef3, beanDef4);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -179,7 +179,7 @@ class BeanDefinitionValidatorTest {
         beanDef1.dependencies().put(beanDef1.name(), beanDef1.type());
         beanDefinitionList = List.of(beanDef1);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -195,7 +195,7 @@ class BeanDefinitionValidatorTest {
         beanDef3.dependencies().put("somename", beanDef1.type());
         beanDefinitionList = List.of(beanDef1, beanDef2, beanDef3);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -211,7 +211,7 @@ class BeanDefinitionValidatorTest {
         beanDef3.dependencies().put(beanDef1.name(), beanDef1.type());
 
         beanDefinitionList = List.of(beanDef1, beanDef2, beanDef3, beanDef4);
-        assertDoesNotThrow(() -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertDoesNotThrow(() -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -229,7 +229,7 @@ class BeanDefinitionValidatorTest {
 
         assertExceptionAndMessage(
                 expectedMessageTemplate.formatted("somename", BeanDefinition.class.getName()),
-                () -> beanDefinitionValidator.validate(beanDefinitionList));
+                () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -241,7 +241,7 @@ class BeanDefinitionValidatorTest {
         beanDef1.dependencies().put("anotherName", Integer.class);
         beanDefinitionList = List.of(beanDef1, beanDef2);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     @Test
@@ -253,7 +253,7 @@ class BeanDefinitionValidatorTest {
         beanDefinitionList = List.of(beanDef1);
 
         assertExceptionAndMessage(expectedMessageTemplate.formatted("anotherName", BeanDefinition.class.getName()),
-                () -> beanDefinitionValidator.validate(beanDefinitionList));
+                () -> beanDefinitionValidator.validateBeanDefinitions(beanDefinitionList));
     }
 
     private void assertExceptionAndMessage(String expectedMessage, Executable executable) {

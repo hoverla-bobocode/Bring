@@ -26,6 +26,9 @@ public class ApplicationContextImpl implements ApplicationContext {
     private static final String NO_UNIQUE_BEAN_EXCEPTION_MESSAGE = "Expected single bean of type %s, but found %d";
 
     private final Table<String, Class<?>, BeanDefinition> beanDefinitionTable;
+    private final LateBeanCreator lateBeanCreator;
+    private final BeanDefinitionValidator validator;
+    private final BeanInitializer initializer;
 
     /**
      * Scanners scan application packages to define {@link BeanDefinition} configs.
@@ -42,14 +45,18 @@ public class ApplicationContextImpl implements ApplicationContext {
      */
     public ApplicationContextImpl(List<BeanScanner> scanners,
                                   BeanDefinitionValidator validator,
+                                  LateBeanCreator lateBeanCreator,
                                   BeanInitializer initializer) {
 
         List<BeanDefinition> beanDefinitionList = runScanning(scanners);
-        validator.validate(beanDefinitionList);
+        validator.validateBeanDefinitions(beanDefinitionList);
         beanDefinitionTable = populateBeansDefinitionTable(beanDefinitionList);
-        initializer.initialize(beanDefinitionTable);
+        initializer.initializeBeans(beanDefinitionTable);
 
         log.info("Application context initialized");
+        this.lateBeanCreator = lateBeanCreator;
+        this.validator = validator;
+        this.initializer = initializer;
     }
 
     private List<BeanDefinition> runScanning(List<BeanScanner> scanners) {
@@ -71,18 +78,31 @@ public class ApplicationContextImpl implements ApplicationContext {
 
     @Override
     public <T> void register(String beanName, Class<T> beanType) {
-        // TODO:  add implementation
-    }
-
-    @Override
-    public void register(Class<?>... beanTypes) {
-        // TODO:  add implementation
+        BeanDefinition lateBean = lateBeanCreator.createLateBean(beanName, beanType);
+        List<BeanDefinition> beanDefinitions = beanDefinitionTable.values().stream().toList();
+        validator.validateBeanDefinition(lateBean, beanDefinitions);
+        initializer.initializeBean(lateBean, beanDefinitionTable);
     }
 
     @Override
     public <T> String register(Class<T> beanType) {
-        // TODO: add implementation
-        return null;
+        BeanDefinition lateBean = lateBeanCreator.createLateBean(beanType);
+        List<BeanDefinition> beanDefinitions = beanDefinitionTable.values().stream().toList();
+        validator.validateBeanDefinition(lateBean, beanDefinitions);
+        initializer.initializeBean(lateBean, beanDefinitionTable);
+        return lateBean.name();
+    }
+
+    @Override
+    public <T> void register(String name, T instance) {
+        SimpleBeanDefinition<T> simpleBeanDefinition = new SimpleBeanDefinition<>(name, instance);
+        beanDefinitionTable.put(name, simpleBeanDefinition.type(), simpleBeanDefinition);
+    }
+
+    @Override
+    public <T> void register(T instance) {
+        SimpleBeanDefinition<T> simpleBeanDefinition = new SimpleBeanDefinition<>(instance);
+        beanDefinitionTable.put(simpleBeanDefinition.name(), simpleBeanDefinition.type(), simpleBeanDefinition);
     }
 
     @Override
@@ -94,11 +114,14 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .stream()
                 .map(beanDefinition -> beanType.cast(beanDefinition.getInstance()))
                 .toList();
+
         if (beans.isEmpty()) {
             throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName()));
-        } else if (beans.size() > 1) {
+        }
+        if (beans.size() > 1) {
             throw new NoUniqueBeanException(NO_UNIQUE_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName(), beans.size()));
-        } else return beans.get(0);
+        }
+        return beans.get(0);
     }
 
     @Override
@@ -121,9 +144,8 @@ public class ApplicationContextImpl implements ApplicationContext {
         Object bean = getBean(beanName);
         if (bean.getClass().isAssignableFrom(beanType)) {
             return beanType.cast(bean);
-        } else {
-            throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName));
         }
+        throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName));
     }
 
     @Override

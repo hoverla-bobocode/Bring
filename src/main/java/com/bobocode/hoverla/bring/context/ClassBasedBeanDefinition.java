@@ -22,7 +22,6 @@ import java.util.Optional;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.ArrayUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Java class-based implementation of {@link BeanDefinition}.
@@ -61,6 +60,16 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
 
         this.dependencies = resolveDependencies(beanClass);
         log.trace("Resolved dependencies are {}", dependencies);
+
+    }
+
+    public ClassBasedBeanDefinition(String name, Class<?> beanClass) {
+        this.name = name;
+        this.type = beanClass;
+        log.debug("Creating {} from class '{}'", ClassBasedBeanDefinition.class.getSimpleName(), this.type.getName());
+
+        this.dependencies = resolveDependencies(beanClass);
+        log.trace("Resolved dependencies are {}", dependencies);
     }
 
     /**
@@ -87,12 +96,10 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
      * @return name of current {@link BeanDefinition}.
      */
     private String resolveName(Class<?> beanClass) {
-        Bean annotation = beanClass.getAnnotation(Bean.class);
-        String beanName = annotation.name();
-        if (isBlank(beanName)) {
-            return beanClass.getName();
-        }
-        return beanName;
+        return Optional.ofNullable(beanClass.getAnnotation(Bean.class))
+                .map(Bean::name)
+                .filter(s -> !s.isBlank())
+                .orElse(beanClass.getName());
     }
 
     /**

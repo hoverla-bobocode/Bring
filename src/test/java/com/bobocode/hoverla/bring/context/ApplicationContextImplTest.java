@@ -31,6 +31,7 @@ class ApplicationContextImplTest {
     private static BeanScanner beanScannerTwo;
     private static BeanDefinitionValidator validator;
     private static BeanInitializer initializer;
+    private static LateBeanCreator lateBeanCreator;
 
     @BeforeEach
     void init() {
@@ -39,8 +40,8 @@ class ApplicationContextImplTest {
         List<BeanScanner> beanScannerList = Arrays.asList(beanScannerOne, beanScannerTwo);
 
         validator = Mockito.mock(BeanDefinitionValidator.class);
-
         initializer = Mockito.mock(BeanInitializer.class);
+        lateBeanCreator = Mockito.mock(LateBeanCreator.class);
 
         BeanDefinition beanDefinitionStringOne = Mockito.mock(BeanDefinition.class);
         BeanDefinition beanDefinitionStringTwo = Mockito.mock(BeanDefinition.class);
@@ -61,7 +62,7 @@ class ApplicationContextImplTest {
         doReturn(String.class).when(beanDefinitionStringTwo).type();
         when(beanDefinitionStringTwo.getInstance()).thenReturn("String bean");
 
-        applicationContext = new ApplicationContextImpl(beanScannerList, validator, initializer);
+        applicationContext = new ApplicationContextImpl(beanScannerList, validator, lateBeanCreator, initializer);
     }
 
     @Test
@@ -70,9 +71,9 @@ class ApplicationContextImplTest {
         verify(beanScannerOne).scan();
         verify(beanScannerTwo).scan();
 
-        verify(validator).validate(anyList());
+        verify(validator).validateBeanDefinitions(anyList());
 
-        verify(initializer).initialize(any());
+        verify(initializer).initializeBeans(any());
     }
 
     @Test

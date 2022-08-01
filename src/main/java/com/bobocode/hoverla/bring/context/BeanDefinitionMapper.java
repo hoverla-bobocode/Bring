@@ -29,4 +29,8 @@ public class BeanDefinitionMapper {
         return new ConfigBasedBeanDefinition(configInstance, beanMethod);
     }
 
+    public BeanDefinition mapToBeanDefinition(String name, Class<?> scannedClass) {
+        return new ClassBasedBeanDefinition(name, scannedClass);
+    }
+
 }
