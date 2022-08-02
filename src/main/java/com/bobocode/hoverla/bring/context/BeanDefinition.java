@@ -62,4 +62,5 @@ public interface BeanDefinition {
      */
     Object getInstance();
 
+    boolean isPrimary();
 }

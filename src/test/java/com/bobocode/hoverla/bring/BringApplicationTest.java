@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BringApplicationTest {
+
     private final String EXCEPTION_MESSAGE = "Argument [packagesToScan] must contain at least one not null and not empty element";
 
     @ParameterizedTest(name = "Throws exception when null or empty package name was provided")
