@@ -16,6 +16,7 @@ import com.bobocode.hoverla.bring.context.BeanScanner;
 import com.google.common.base.Strings;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
@@ -47,6 +48,7 @@ import java.util.List;
  */
 @UtilityClass
 public class BringApplication {
+    private final CharSequence[] ILLEGAL_SYMBOLS = {"^","!","@","#","$","%","^","&","*","(",")","?","~","+","-","<",">","/",","};
 
     /**
      * Initializes and returns {@link ApplicationContext}
@@ -86,18 +88,17 @@ public class BringApplication {
         return List.of(beanAnnotationScanner, beanConfigurationClassScanner);
     }
 
-    // TODO: will definitely need to refactor this method
-    private void validatePackagesToScan(String... packagesToScan) {
-        String message = "Argument [packagesToScan] must contain at least one not null and not empty element";
+    private static void validatePackagesToScan(String... packagesToScan) {
         if (ArrayUtils.isEmpty(packagesToScan)) {
-            throw new IllegalArgumentException(message);
+            throw new IllegalArgumentException("Argument [packagesToScan] must contain at least one not null and not empty element");
         }
-
-        String[] filteredPackages = Arrays.stream(packagesToScan)
-                .filter(p -> !Strings.isNullOrEmpty(p))
-                .toArray(String[]::new);
-        if (filteredPackages.length == 0) {
-            throw new IllegalArgumentException(message);
+        if (Arrays.stream(packagesToScan)
+                .anyMatch(Strings::isNullOrEmpty)) {
+            throw new IllegalArgumentException("Argument [packagesToScan] must not contain null or empty element");
+        }
+        if (Arrays.stream(packagesToScan)
+                .anyMatch(p -> StringUtils.containsAny(p, ILLEGAL_SYMBOLS))) {
+            throw new IllegalArgumentException("Package name must contain only letters, numbers and symbol [.]");
         }
     }
 
