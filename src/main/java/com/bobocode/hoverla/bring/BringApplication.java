@@ -10,9 +10,11 @@ import com.bobocode.hoverla.bring.context.BeanConfigurationClassScanner;
 import com.bobocode.hoverla.bring.context.BeanConfigurationClassValidator;
 import com.bobocode.hoverla.bring.context.BeanDefinitionMapper;
 import com.bobocode.hoverla.bring.context.BeanDefinitionValidator;
+import com.bobocode.hoverla.bring.context.BeanDependencyNameResolver;
 import com.bobocode.hoverla.bring.context.BeanInitializer;
 import com.bobocode.hoverla.bring.context.BeanScanner;
 import com.google.common.base.Strings;
+import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
@@ -43,15 +45,14 @@ import java.util.List;
  *
  * It is necessary to provide packages to be scanned to define bean definition configs.
  */
+@UtilityClass
 public class BringApplication {
-    private BringApplication() {
-    }
 
     /**
      * Initializes and returns {@link ApplicationContext}
      * @param packagesToScan packages to scan
      */
-    public static ApplicationContext loadContext(String... packagesToScan) {
+    public ApplicationContext loadContext(String... packagesToScan) {
         return createContext(packagesToScan);
     }
 
@@ -62,22 +63,31 @@ public class BringApplication {
      * @param packagesToScan packages for scanning to define bean configs
      * @return instance of {@link ApplicationContextImpl}
      */
-    private static ApplicationContext createContext(String... packagesToScan) {
+    private ApplicationContext createContext(String... packagesToScan) {
         validatePackagesToScan(packagesToScan);
 
-        BeanDefinitionMapper beanDefinitionMapper = new BeanDefinitionMapper();
-        BeanAnnotationClassValidator beanAnnotationClassValidator = new BeanAnnotationClassValidator();
-        BeanAnnotationScanner beanAnnotationScanner = new BeanAnnotationScanner(beanAnnotationClassValidator, beanDefinitionMapper, packagesToScan);
-        BeanConfigurationClassValidator beanConfigurationClassValidator = new BeanConfigurationClassValidator();
-        BeanConfigurationClassScanner beanConfigurationClassScanner = new BeanConfigurationClassScanner(beanConfigurationClassValidator, beanDefinitionMapper, packagesToScan);
+        List<BeanScanner> scanners = createBeanScanners(packagesToScan);
+        var beanDefinitionValidator = new BeanDefinitionValidator();
+        var dependencyNameResolver = new BeanDependencyNameResolver();
+        var initializer = new BeanInitializer(dependencyNameResolver);
 
-        List<BeanScanner> scanners = List.of(beanAnnotationScanner, beanConfigurationClassScanner);
-        BeanDefinitionValidator beanDefinitionValidator = new BeanDefinitionValidator();
-        BeanInitializer initializer = new BeanInitializer();
         return new ApplicationContextImpl(scanners, beanDefinitionValidator, initializer);
     }
 
-    private static void validatePackagesToScan(String... packagesToScan) {
+    private List<BeanScanner> createBeanScanners(String[] packagesToScan) {
+        var beanDefinitionMapper = new BeanDefinitionMapper();
+
+        var beanAnnotationClassValidator = new BeanAnnotationClassValidator();
+        var beanAnnotationScanner = new BeanAnnotationScanner(beanAnnotationClassValidator, beanDefinitionMapper, packagesToScan);
+
+        var beanConfigurationClassValidator = new BeanConfigurationClassValidator();
+        var beanConfigurationClassScanner = new BeanConfigurationClassScanner(beanConfigurationClassValidator, beanDefinitionMapper, packagesToScan);
+
+        return List.of(beanAnnotationScanner, beanConfigurationClassScanner);
+    }
+
+    // TODO: will definitely need to refactor this method
+    private void validatePackagesToScan(String... packagesToScan) {
         String message = "Argument [packagesToScan] must contain at least one not null and not empty element";
         if (ArrayUtils.isEmpty(packagesToScan)) {
             throw new IllegalArgumentException(message);
@@ -95,14 +105,15 @@ public class BringApplication {
      * Creates instance of ApplicationContextBuilder class
      * @return ApplicationContextBuilder instance
      */
-    public static ApplicationContextBuilder getContextBuilder() {
+    public ApplicationContextBuilder getContextBuilder() {
         return new ApplicationContextBuilder();
     }
 
     /**
      *
      */
-    public static class ApplicationContextBuilder {
+    public class ApplicationContextBuilder {
+
         private Level logLevel;
         private String[] packagesToScan;
 

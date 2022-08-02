@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BringPositiveIntegrationTest {
 
     private static final String PACKAGE = "com.bobocode.hoverla.bring.integration";
+
     private ApplicationContext applicationContext;
 
     @BeforeEach

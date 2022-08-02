@@ -3,6 +3,7 @@ package com.bobocode.hoverla.bring.context;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,10 +29,19 @@ class BeanInitializerTest {
     private static final String BD3 = "beanDef3";
     private static final String BD4 = "beanDef4";
 
+    private BeanInitializer beanInitializer;
+    private BeanDependencyNameResolver dependencyNameResolver;
+
+    @BeforeEach
+    void setUp() {
+        dependencyNameResolver = mock(BeanDependencyNameResolver.class);
+        beanInitializer = new BeanInitializer(dependencyNameResolver);
+    }
+
     @Test
     @DisplayName("Initialization test. Verifies that 'instance' method of BeanDefinition is called with correct dependencies")
     void testInitialize() {
-        //Given
+        // Given
         BeanDefinition beanDef1 = prepareDefinition(BD1, BD2, BD3);
         BeanDefinition beanDef2 = prepareDefinition(BD2, BD3, BD4);
         BeanDefinition beanDef3 = prepareDefinition(BD3, BD4);
@@ -51,12 +61,12 @@ class BeanInitializerTest {
                 beanDef4, new BeanDefinition[0]
         );
 
-        BeanInitializer beanInitializer = new BeanInitializer();
-
-        //When
+        // When
         beanInitializer.initialize(beanDefinitionTable);
 
-        //Then
+        // Then
+        verify(dependencyNameResolver).resolveDependencyNames(beanDefinitionTable);
+
         for (BeanDefinition beanDefinition : beanDefinitionTable.values()) {
             ArgumentCaptor<BeanDefinition> definitionCaptor = ArgumentCaptor.forClass(BeanDefinition.class);
 
@@ -70,7 +80,7 @@ class BeanInitializerTest {
         }
     }
 
-    private static BeanDefinition prepareDefinition(String beanDefinitionName, String... dependencyNames) {
+    private BeanDefinition prepareDefinition(String beanDefinitionName, String... dependencyNames) {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
         doReturn(BeanDefinition.class).when(beanDefinition).type();
         when(beanDefinition.name()).thenReturn(beanDefinitionName);
@@ -82,7 +92,7 @@ class BeanInitializerTest {
         when(beanDefinition.dependencies()).thenReturn(dependencies);
 
         // isInstantiated() method of BeanDefinition should return true only when instantiate(...) method was called.
-        // To mock such behavior we basically say: "when instantiate -> then isInstantiated() should return true"
+        // To mock such behavior we basically say: "when instantiate() -> then isInstantiated() should return true"
         Supplier<?> instantiateAnswerSupplier = () -> when(beanDefinition.isInstantiated()).thenReturn(true);
         doAnswer(ignore -> instantiateAnswerSupplier.get()).when(beanDefinition).instantiate(any());
 

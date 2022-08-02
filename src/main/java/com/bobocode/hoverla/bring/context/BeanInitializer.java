@@ -2,6 +2,7 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.annotation.Bean;
 import com.google.common.collect.Table;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -17,7 +18,10 @@ import java.util.Collection;
  * @see BeanDefinition
  */
 @Slf4j
+@RequiredArgsConstructor
 public class BeanInitializer {
+
+    private final BeanDependencyNameResolver dependencyNameResolver;
 
     /**
      * Triggers instantiation of all beans by passing their required dependencies.
@@ -26,6 +30,8 @@ public class BeanInitializer {
      */
     public void initialize(Table<String, Class<?>, BeanDefinition> beanDefinitionsTable) {
         log.debug("Bean initialization started");
+        dependencyNameResolver.resolveDependencyNames(beanDefinitionsTable);
+
         Collection<BeanDefinition> beanDefinitions = beanDefinitionsTable.values();
         beanDefinitions.forEach(beanDefinition -> doInitialize(beanDefinition, beanDefinitionsTable));
     }
@@ -36,7 +42,7 @@ public class BeanInitializer {
             return;
         }
         String beanName = definitionToInitialize.name();
-        log.trace("Resolving dependencies for bean definition: {}", beanName);
+        log.trace("Initializing bean definition - {}", beanName);
 
         BeanDefinition[] beanDependencies = getBeanDependencies(definitionToInitialize, beanDefinitionsTable);
         int numberOfDependencies = ArrayUtils.getLength(beanDependencies);
