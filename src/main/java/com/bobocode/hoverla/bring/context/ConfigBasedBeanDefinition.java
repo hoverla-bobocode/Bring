@@ -87,7 +87,7 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
      */
     private String resolveName(Method beanMethod) {
         Bean annotation = beanMethod.getAnnotation(Bean.class);
-        String beanName = annotation.name();
+        String beanName = annotation.value();
         if (beanName.isEmpty()) {
             return beanMethod.getName();
         }
@@ -152,6 +152,6 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
         if (parameter.isAnnotationPresent(Qualifier.class)) {
             return parameter.getAnnotation(Qualifier.class).value();
         }
-        return parameter.getName();
+        return parameter.getType().getName();
     }
 }

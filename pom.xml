@@ -21,6 +21,7 @@
         <lombok.version>1.18.24</lombok.version>
         <guava.version>31.1-jre</guava.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
+        <commons-collections.version>4.4</commons-collections.version>
         <reflections.version>0.10.2</reflections.version>
         <junit.version>5.8.2</junit.version>
         <mockito.version>4.6.1</mockito.version>
@@ -52,6 +53,11 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>${commons-lang3.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>${commons-collections.version}</version>
         </dependency>
         <dependency>
             <groupId>org.reflections</groupId>

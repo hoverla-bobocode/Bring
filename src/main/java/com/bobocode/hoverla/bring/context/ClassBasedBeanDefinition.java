@@ -88,7 +88,7 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
      */
     private String resolveName(Class<?> beanClass) {
         Bean annotation = beanClass.getAnnotation(Bean.class);
-        String beanName = annotation.name();
+        String beanName = annotation.value();
         if (isBlank(beanName)) {
             return beanClass.getName();
         }

@@ -38,5 +38,5 @@ public @interface Bean {
      * or other methods that require bean name.</p>
      *
      */
-    String name() default "";
+    String value() default "";
 }

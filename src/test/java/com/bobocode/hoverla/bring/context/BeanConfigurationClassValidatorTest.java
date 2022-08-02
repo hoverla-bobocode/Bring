@@ -67,7 +67,13 @@ class BeanConfigurationClassValidatorTest {
                         "Doesn't allow method marked as @Bean to be protected"),
                 Arguments.of(
                         "staticMethod method must not be static",
-                        "Doesn't allow method marked as @Bean to be static")
+                        "Doesn't allow method marked as @Bean to be static"),
+                Arguments.of("Found several method parameters with same @Qualifier value `int`",
+                        "Doesn't allow method marked as @Bean to have parameters with same @Qualifier"),
+                Arguments.of(
+                        "Found several method parameters of type java.lang.Integer without @Qualifier",
+                        "Doesn't allow method marked as @Bean to have parameters of same type without @Qualifier"
+                )
         );
     }
 

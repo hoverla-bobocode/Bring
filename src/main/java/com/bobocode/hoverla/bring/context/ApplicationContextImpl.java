@@ -94,11 +94,14 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .stream()
                 .map(beanDefinition -> beanType.cast(beanDefinition.getInstance()))
                 .toList();
+
         if (beans.isEmpty()) {
             throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName()));
-        } else if (beans.size() > 1) {
+        }
+        if (beans.size() > 1) {
             throw new NoUniqueBeanException(NO_UNIQUE_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName(), beans.size()));
-        } else return beans.get(0);
+        }
+        return beans.get(0);
     }
 
     @Override
@@ -119,10 +122,10 @@ public class ApplicationContextImpl implements ApplicationContext {
         checkBeanName(beanName);
 
         Object bean = getBean(beanName);
-        if (bean.getClass().isAssignableFrom(beanType)) {
+        try {
             return beanType.cast(bean);
-        } else {
-            throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName));
+        } catch (ClassCastException ex) {
+            throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getName()));
         }
     }
 

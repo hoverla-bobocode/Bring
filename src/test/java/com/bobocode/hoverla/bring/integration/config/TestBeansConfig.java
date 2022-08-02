@@ -7,7 +7,7 @@ import com.bobocode.hoverla.bring.integration.beans.TestBean1;
 import com.bobocode.hoverla.bring.integration.beans.TestBean2;
 
 @Configuration
-public class BeansConfig {
+public class TestBeansConfig {
 
     @Bean
     public TestBean1 testBean1FromConfig() {
