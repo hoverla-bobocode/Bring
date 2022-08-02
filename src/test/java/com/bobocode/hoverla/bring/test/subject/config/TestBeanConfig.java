@@ -12,7 +12,7 @@ public class TestBeanConfig {
         return "instance";
     }
 
-    @Bean(name = "beanName")
+    @Bean("beanName")
     public String beanWithNameInAnnotation() {
         return "instance";
     }

@@ -8,9 +8,13 @@ import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean4;
 import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean5;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithInjectConstructors;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithPlainConstructors;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithSameParameterQualifiers;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithSameTypeParameters;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithSingleInjectConstructor;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.constructor.TestBeanWithoutConstructors;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.field.TestBeanWithFinalInjectFields;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.field.TestBeanWithSameTypeInjectFields;
+import com.bobocode.hoverla.bring.test.subject.validation.bean.field.TestBeanWithSameFieldQualifiers;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.field.TestBeanWithStaticInjectFields;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.type.AbstractTestBean;
 import com.bobocode.hoverla.bring.test.subject.validation.bean.type.EnumTestBean;
@@ -51,7 +55,11 @@ class BeanAnnotationClassValidatorTest {
                 Arguments.of(TestBeanWithSingleInjectConstructor.class, "@Inject constructor has no parameters"),
                 Arguments.of(TestBeanWithInjectConstructors.class, "Class has 2 constructors marked with @Inject. Unable to pick up one"),
                 Arguments.of(TestBeanWithStaticInjectFields.class, "Field marked with @Inject cannot be static/final"),
-                Arguments.of(TestBeanWithFinalInjectFields.class, "Field marked with @Inject cannot be static/final")
+                Arguments.of(TestBeanWithFinalInjectFields.class, "Field marked with @Inject cannot be static/final"),
+                Arguments.of(TestBeanWithSameTypeInjectFields.class, "Found several fields of type java.lang.Integer without @Qualifier"),
+                Arguments.of(TestBeanWithSameFieldQualifiers.class, "Found several fields with same @Qualifier value `string`"),
+                Arguments.of(TestBeanWithSameTypeParameters.class, "Found several constructor parameters of type java.lang.String without @Qualifier"),
+                Arguments.of(TestBeanWithSameParameterQualifiers.class, "Found several constructor parameters with same @Qualifier value `int`")
         );
     }
 

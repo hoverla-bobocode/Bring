@@ -70,7 +70,7 @@ class ConfigBasedBeanDefinitionTest {
         when(firstDependency.getInstance()).thenReturn(1);
         BeanDefinition secondDependency = mock(BeanDefinition.class);
         when(secondDependency.getInstance()).thenReturn("string");
-        Map<String, Class<?>> dependencies = Map.of("num", int.class, "testParamName", String.class);
+        Map<String, Class<?>> dependencies = Map.of(int.class.getName(), int.class, "testParamName", String.class);
 
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);
 
@@ -122,7 +122,7 @@ class ConfigBasedBeanDefinitionTest {
 
         BeanDefinition firstDependency = mock(BeanDefinition.class);
         when(firstDependency.getInstance()).thenReturn((byte) 1);
-        when(firstDependency.name()).thenReturn("num");
+        when(firstDependency.name()).thenReturn(byte.class.getName());
         doReturn(byte.class).when(firstDependency).type();
 
         BeanDefinition secondDependency = mock(BeanDefinition.class);
@@ -132,7 +132,7 @@ class ConfigBasedBeanDefinitionTest {
 
         BeanDefinition thirdDependency = mock(BeanDefinition.class);
         when(thirdDependency.getInstance()).thenReturn("anotherString");
-        when(thirdDependency.name()).thenReturn("anotherValue");
+        when(thirdDependency.name()).thenReturn(String.class.getName());
         doReturn(String.class).when(thirdDependency).type();
 
         ConfigBasedBeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);

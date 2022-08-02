@@ -7,16 +7,18 @@ import com.bobocode.hoverla.bring.annotation.Qualifier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+
 @Configuration
 public class ValidTestBeanConfig {
 
     @Bean
     public String beam1() {
-        return "";
+        return EMPTY;
     }
 
     public String notBean() {
-        return "";
+        return EMPTY;
     }
 
     @Bean
