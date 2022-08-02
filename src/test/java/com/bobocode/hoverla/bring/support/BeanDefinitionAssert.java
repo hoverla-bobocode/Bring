@@ -47,4 +47,20 @@ public class BeanDefinitionAssert extends AbstractObjectAssert<BeanDefinitionAss
 
         return this;
     }
+
+    public BeanDefinitionAssert isPrimary() {
+        isNotNull();
+        if (!actual.isPrimary()) {
+            failWithMessage("Expected bean to be primary");
+        }
+        return this;
+    }
+
+    public BeanDefinitionAssert isNotPrimary() {
+        isNotNull();
+        if (actual.isPrimary()) {
+            failWithMessage("Expected bean not to be primary");
+        }
+        return this;
+    }
 }

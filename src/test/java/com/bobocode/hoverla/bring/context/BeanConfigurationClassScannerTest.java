@@ -32,7 +32,7 @@ class BeanConfigurationClassScannerTest {
     void scansAllBeansFromConfigClasses() {
         scanner = new BeanConfigurationClassScanner(validator, mapper, CONFIG_PACKAGE_NAME, NO_CONFIG_PACKAGE_NAME);
         List<BeanDefinition> beanDefinitions = scanner.scan();
-        assertThat(beanDefinitions).hasSize(5);
+        assertThat(beanDefinitions).hasSize(6);
     }
 
     @Test

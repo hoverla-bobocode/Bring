@@ -95,7 +95,7 @@ class BeanDefinitionValidatorTest {
     @Test
     @DisplayName("Fails on dependency validation when the found dependency type is not suitable for the required type")
     void unsuitableTypeForDependency() {
-        String expectedMessage = "Found dependency type is not assignable from the required type - required %s but found - class %s";
+        String expectedMessage = "Found dependency type is not assignable from the required type - required is %s but found %s";
         BeanDefinition beanDef1 = prepareDefinition("anotherType", String.class);
         BeanDefinition beanDefinitionWithConflictDependencies = prepareDefinition(BD2, String.class, beanDef1);
         beanDefinitionList = List.of(beanDef1, beanDefinitionWithConflictDependencies);
@@ -183,13 +183,9 @@ class BeanDefinitionValidatorTest {
     }
 
     @Test
-    @DisplayName("Fails when bean has a self-dependency by type: A -> A")
-    void checkingSelfDependencyByBeanType() {
-        String expectedMessage = """
-                Oops. Circular dependency occurs with bean: beanDef1 - java.lang.Long
-                beanDef1 depends on: [beanDef2]
-                beanDef2 depends on: [java.lang.Long]
-                beanDef1 depends on: [beanDef2]""";
+    @DisplayName("Fails when checking dependencies and found more than 1 bean by type")
+    void checkingDependencyMoreThanOneDependencyByType() {
+        String expectedMessage = "Found more than 1 bean with type java.lang.Long in context";
         BeanDefinition beanDef1 = prepareDefinition(BD1, Long.class);
         BeanDefinition beanDef2 = prepareDefinition(BD2, Integer.class);
         beanDef1.dependencies().put(beanDef2.name(), Integer.class);
@@ -217,8 +213,8 @@ class BeanDefinitionValidatorTest {
 
     @Test
     @DisplayName("Fails when checking dependencies and bean was not found by custom name or by type")
-    void checkingDependencyNotFoundDependencyByNameAndType() {
-        String expectedMessageTemplate = "Unable to find bean with name - `%s` and type - %s in context";
+    void checkingDependencyNotFoundDependencyByType() {
+        String expectedMessageTemplate = "Unable to find bean with name `%s` and type %s in context";
         String dependencyName = BeanDefinition.class.getName();
         BeanDefinition beanDef1 = prepareDefinition(BD1, Long.class);
         BeanDefinition beanDef2 = prepareDefinition(BD2, String.class);
@@ -237,7 +233,7 @@ class BeanDefinitionValidatorTest {
     @Test
     @DisplayName("Fails when didn't find dependency by default name - class.getName(), but found by type more than 1")
     void moreThanOneBeanByType() {
-        String expectedMessage = "Found more than 1 bean with type: class java.lang.Integer in context";
+        String expectedMessage = "Found more than 1 bean with type java.lang.Integer in context";
         String dependencyName = Integer.class.getName();
         BeanDefinition beanDef1 = prepareDefinition("beanDef1", Integer.class);
         BeanDefinition beanDef2 = prepareDefinition(BD2, Integer.class);
@@ -250,12 +246,44 @@ class BeanDefinitionValidatorTest {
     @Test
     @DisplayName("Fails when didn't find dependency by custom name and type")
     void dependenciesNotFoundByCustomName() {
-        String expectedMessageTemplate = "Unable to find bean with name - `%s` and type - %s in context";
+        String expectedMessageTemplate = "Unable to find bean with name `%s` and type %s in context";
         BeanDefinition beanDef1 = prepareDefinition("beanDef1", Integer.class);
         beanDef1.dependencies().put("anotherName", BeanDefinition.class);
         beanDefinitionList = List.of(beanDef1);
 
         assertExceptionAndMessage(expectedMessageTemplate.formatted("anotherName", BeanDefinition.class.getName()),
+                () -> beanDefinitionValidator.validate(beanDefinitionList));
+    }
+
+    @Test
+    @DisplayName("Looks for primary bean when more than one bean found with the same type")
+    void primaryBeanIsFound() {
+        BeanDefinition bean = prepareDefinition("bean", Object.class);
+        Class<Integer> type = Integer.class;
+        BeanDefinition primaryBean = prepareDefinition("primaryBean", type);
+        BeanDefinition nonPrimaryBean = prepareDefinition("nonPrimaryBean", type);
+        bean.dependencies().put(type.getName(), type);
+        when(primaryBean.isPrimary()).thenReturn(true);
+
+        beanDefinitionList = List.of(bean, primaryBean, nonPrimaryBean);
+
+        assertDoesNotThrow(() -> beanDefinitionValidator.validate(beanDefinitionList));
+    }
+
+    @Test
+    @DisplayName("Fails on more than one primary bean of the same type")
+    void moreThanOnePrimaryBean() {
+        BeanDefinition bean = prepareDefinition("bean", Object.class);
+        Class<Integer> type = Integer.class;
+        BeanDefinition primaryBean1 = prepareDefinition("primaryBean", type);
+        BeanDefinition primaryBean2 = prepareDefinition("nonPrimaryBean", type);
+        bean.dependencies().put(type.getName(), type);
+        when(primaryBean1.isPrimary()).thenReturn(true);
+        when(primaryBean2.isPrimary()).thenReturn(true);
+
+        beanDefinitionList = List.of(bean, primaryBean1, primaryBean2);
+
+        assertExceptionAndMessage("Found more than 1 primary bean with type java.lang.Integer in context",
                 () -> beanDefinitionValidator.validate(beanDefinitionList));
     }
 

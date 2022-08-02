@@ -59,9 +59,10 @@ public class BeanDefinitionValidator {
     private static final String BEAN_DEFINITION_LIST_IS_NULL = "Bean definition list is null";
     private static final String DUPLICATE_BEAN_NAMES = "Context contains beans with duplicate names: %s";
     private static final String INCORRECT_BEAN_NAME = "%s name for %s class is incorrect. It must not be empty, or contain carriage return, new line, space or tab symbols";
-    private static final String DIFFERENT_TYPES_IN_DEPENDENCIES = "Found dependency type is not assignable from the required type - required %s but found - %s";
-    private static final String MULTIPLE_BEANS_WITH_TYPE = "Found more than 1 bean with type: %s in context";
-    private static final String NOT_FOUND_BEANS = "Unable to find bean with name - `%s` and type - %s in context";
+    private static final String DIFFERENT_TYPES_IN_DEPENDENCIES = "Found dependency type is not assignable from the required type - required is %s but found %s";
+    private static final String MULTIPLE_BEANS_WITH_TYPE = "Found more than 1 bean with type %s in context";
+    private static final String NOT_FOUND_BEANS = "Unable to find bean with name `%s` and type %s in context";
+    private static final String MULTIPLE_PRIMARY_BEANS_FOUND = "Found more than 1 primary bean with type %s in context";
     private static final String BEAN = "Bean";
     private static final String DEPENDENCY = "Dependency";
 
@@ -239,19 +240,39 @@ public class BeanDefinitionValidator {
     private void checkTypeMatching(Class<?> requiredType, BeanDefinition foundBeanDefinition) {
         Class<?> foundType = foundBeanDefinition.type();
         if (!requiredType.isAssignableFrom(foundType)) {
-            throw new BeanValidationException(DIFFERENT_TYPES_IN_DEPENDENCIES.formatted(requiredType.getName(), foundType));
+            throw new BeanValidationException(DIFFERENT_TYPES_IN_DEPENDENCIES.formatted(requiredType.getName(), foundType.getName()));
         }
     }
 
     private BeanDefinition tryFindByType(Class<?> type, List<BeanDefinition> beanDefinitions, String name) {
         List<BeanDefinition> beansByType = findByType(type, beanDefinitions);
         if (beansByType.size() > 1) {
-            throw new BeanValidationException(MULTIPLE_BEANS_WITH_TYPE.formatted(type));
+            log.debug("Found more than 1 candidate for bean dependency with type {}", type.getName());
+            return tryFindPrimaryBean(type, beanDefinitions);
         }
         if (beansByType.isEmpty()) {
             throw new BeanValidationException(NOT_FOUND_BEANS.formatted(name, type.getName()));
         }
         return beansByType.get(0);
+    }
+
+    private BeanDefinition tryFindPrimaryBean(Class<?> targetType, List<BeanDefinition> allDefinitions) {
+        log.debug("Trying to find primary bean with type {}", targetType.getName());
+        List<BeanDefinition> primaryBeans = getPrimaryBeansByType(targetType, allDefinitions);
+        if (primaryBeans.isEmpty()) {
+            throw new BeanValidationException(MULTIPLE_BEANS_WITH_TYPE.formatted(targetType.getName()));
+        }
+        if (primaryBeans.size() > 1) {
+            throw new BeanValidationException(MULTIPLE_PRIMARY_BEANS_FOUND.formatted(targetType.getName()));
+        }
+        return primaryBeans.get(0);
+    }
+
+    private List<BeanDefinition> getPrimaryBeansByType(Class<?> targetType, List<BeanDefinition> allDefinitions) {
+        return allDefinitions.stream()
+                .filter(bd -> targetType.isAssignableFrom(bd.type()))
+                .filter(BeanDefinition::isPrimary)
+                .toList();
     }
 
     private List<BeanDefinition> findByType(Class<?> targetType, List<BeanDefinition> allDefinitions) {

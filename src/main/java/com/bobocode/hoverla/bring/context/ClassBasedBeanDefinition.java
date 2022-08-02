@@ -77,6 +77,11 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
         }
     }
 
+    @Override
+    public boolean isPrimary() {
+        return type.getAnnotation(Bean.class).primary();
+    }
+
     /**
      * Resolves name of current {@link BeanDefinition}.
      *
