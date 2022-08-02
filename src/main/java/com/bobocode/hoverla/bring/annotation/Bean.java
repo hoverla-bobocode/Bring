@@ -36,7 +36,14 @@ public @interface Bean {
      * Represents bean name.
      * <p>Can be used to retrieve existing bean instance using {@link ApplicationContext#getBean(String)}
      * or other methods that require bean name.</p>
-     *
      */
     String value() default "";
+
+    /**
+     * Represents whether a bean is primary or not. In case primary is set
+     * to {@code true} this bean will be injected in those beans which don't specify
+     * a name in {@link Qualifier @Qualifier} for expected bean dependency.
+     * By default, all beans are not primary.
+     */
+    boolean primary() default false;
 }

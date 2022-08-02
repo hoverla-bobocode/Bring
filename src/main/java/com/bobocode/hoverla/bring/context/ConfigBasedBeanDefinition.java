@@ -76,6 +76,11 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
         }
     }
 
+    @Override
+    public boolean isPrimary() {
+        return beanMethod.getAnnotation(Bean.class).primary();
+    }
+
     /**
      * Resolves name of current {@link BeanDefinition}.
      *

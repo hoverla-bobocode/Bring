@@ -6,6 +6,7 @@ import com.bobocode.hoverla.bring.test.subject.bean.TestBeanWithInjectFields;
 import com.bobocode.hoverla.bring.test.subject.bean.TestBeanWithInjectFieldsAndConstructor;
 import com.bobocode.hoverla.bring.test.subject.bean.TestBeanWithPlainConstructor;
 import com.bobocode.hoverla.bring.test.subject.bean.TestBeanWithoutDependencies;
+import com.bobocode.hoverla.bring.test.subject.bean.TestPrimaryBean;
 import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean1;
 import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean2;
 import com.bobocode.hoverla.bring.test.subject.bean.util.TestBean3;
@@ -229,6 +230,20 @@ class ClassBasedBeanDefinitionTest {
                 .hasFieldOrPropertyWithValue("aString", "strValue")
                 .hasFieldOrPropertyWithValue("anInteger", 2)
                 .hasFieldOrPropertyWithValue("aDouble", 2.2d);
+    }
+
+    @Test
+    @DisplayName("Class marked as primary is treated as a primary bean definitions")
+    void primaryBeansTest() {
+        BeanDefinition beanDefinition = new ClassBasedBeanDefinition(TestPrimaryBean.class);
+        assertThat(beanDefinition).isPrimary();
+    }
+
+    @Test
+    @DisplayName("Class not marked as primary is not treated as a primary bean definitions")
+    void nonPrimaryBeansTest() {
+        BeanDefinition beanDefinition = new ClassBasedBeanDefinition(TestBeanWithPlainConstructor.class);
+        assertThat(beanDefinition).isNotPrimary();
     }
 
     private BeanDefinition prepareDefinition(Class<?> type, String name, Object instance) {

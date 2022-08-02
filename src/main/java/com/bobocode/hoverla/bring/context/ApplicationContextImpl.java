@@ -70,31 +70,10 @@ public class ApplicationContextImpl implements ApplicationContext {
     }
 
     @Override
-    public <T> void register(String beanName, Class<T> beanType) {
-        // TODO:  add implementation
-    }
-
-    @Override
-    public void register(Class<?>... beanTypes) {
-        // TODO:  add implementation
-    }
-
-    @Override
-    public <T> String register(Class<T> beanType) {
-        // TODO: add implementation
-        return null;
-    }
-
-    @Override
     public <T> T getBean(Class<T> beanType) {
         checkNotNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
 
-        List<T> beans = beanDefinitionTable.column(beanType)
-                .values()
-                .stream()
-                .map(beanDefinition -> beanType.cast(beanDefinition.getInstance()))
-                .toList();
-
+        List<T> beans = findBeanByType(beanType);
         if (beans.isEmpty()) {
             throw new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanType.getSimpleName()));
         }
@@ -104,10 +83,17 @@ public class ApplicationContextImpl implements ApplicationContext {
         return beans.get(0);
     }
 
+    private <T> List<T> findBeanByType(Class<T> beanType) {
+        return beanDefinitionTable.column(beanType)
+                .values()
+                .stream()
+                .map(beanDefinition -> beanType.cast(beanDefinition.getInstance()))
+                .toList();
+    }
+
     @Override
     public Object getBean(String beanName) {
         checkBeanName(beanName);
-
         return beanDefinitionTable.row(beanName)
                 .values()
                 .stream()
@@ -132,7 +118,6 @@ public class ApplicationContextImpl implements ApplicationContext {
     @Override
     public <T> Map<String, T> getAllBeans(Class<T> beanType) {
         checkNotNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
-
         return beanDefinitionTable.column(beanType)
                 .entrySet()
                 .stream()
@@ -149,5 +134,4 @@ public class ApplicationContextImpl implements ApplicationContext {
         checkArgument(isNotEmpty(beanName), BEAN_NAME_MUST_BE_NOT_NULL_MESSAGE);
         checkArgument(containsNone(beanName, SPACE), BEAN_NAME_MUST_NOT_CONTAIN_SPACES);
     }
-
 }

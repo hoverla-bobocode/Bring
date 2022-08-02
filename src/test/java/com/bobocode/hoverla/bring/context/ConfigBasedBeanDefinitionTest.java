@@ -2,6 +2,7 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.bobocode.hoverla.bring.support.BeanDefinitionAssert;
+import com.bobocode.hoverla.bring.test.subject.bean.TestPrimaryBean;
 import com.bobocode.hoverla.bring.test.subject.config.TestBeanConfig;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,5 +148,21 @@ class ConfigBasedBeanDefinitionTest {
                 .isNotNull()
                 .isInstanceOf(Byte.class)
                 .isEqualTo((byte) 0);
+    }
+
+    @Test
+    @DisplayName("Method marked as primary is treated as a primary bean definitions")
+    void primaryBeansTest() throws NoSuchMethodException {
+        Method method = testBeanConfig.getClass().getMethod("primaryBean");
+        BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(TestPrimaryBean.class, method);
+        BeanDefinitionAssert.assertThat(beanDefinition).isPrimary();
+    }
+
+    @Test
+    @DisplayName("Method not marked as primary is not treated as a primary bean definitions")
+    void nonPrimaryBeansTest() throws NoSuchMethodException {
+        Method method = testBeanConfig.getClass().getMethod("beanWithNameInAnnotation");
+        BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(TestPrimaryBean.class, method);
+        BeanDefinitionAssert.assertThat(beanDefinition).isNotPrimary();
     }
 }

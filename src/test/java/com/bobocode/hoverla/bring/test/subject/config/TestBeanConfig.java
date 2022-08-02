@@ -30,4 +30,9 @@ public class TestBeanConfig {
     public String notBeanMethod() {
         return "not_bean";
     }
+
+    @Bean(primary = true)
+    public String primaryBean() {
+        return "";
+    }
 }

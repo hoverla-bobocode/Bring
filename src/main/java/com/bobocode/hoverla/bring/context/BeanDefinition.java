@@ -62,5 +62,10 @@ public interface BeanDefinition {
      */
     Object getInstance();
 
+    /**
+     * Method to check if bean is marked as {@link Bean#primary() primary}
+     *
+     * @return {@code true} if bean is primary, {@code false} otherwise.
+     */
     boolean isPrimary();
 }
