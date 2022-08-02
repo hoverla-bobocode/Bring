@@ -7,6 +7,8 @@ import com.bobocode.hoverla.bring.integration.beans.TestBean1;
 import com.bobocode.hoverla.bring.integration.beans.TestBean2;
 import com.bobocode.hoverla.bring.integration.beans.TestBean5;
 import com.bobocode.hoverla.bring.integration.beans.TestBean6;
+import com.bobocode.hoverla.bring.integration.beans.TestBean8;
+import com.bobocode.hoverla.bring.integration.beans.TestBean9;
 import lombok.extern.slf4j.Slf4j;
 
 @Configuration
@@ -51,5 +53,15 @@ public class TestBeansConfig {
     @Bean
     public Object objectBean() {
         return new Object();
+    }
+
+    @Bean
+    public TestBean8 testBean8FromConfig(@Qualifier("testBean1FromConfig") TestBean1 testBean1) {
+        return new TestBean8(testBean1);
+    }
+
+    @Bean
+    public TestBean9 testBean9FromConfig() {
+        return new TestBean9();
     }
 }

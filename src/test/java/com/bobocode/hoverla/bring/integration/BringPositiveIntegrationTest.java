@@ -46,7 +46,13 @@ class BringPositiveIntegrationTest {
                 Arguments.of("com.bobocode.hoverla.bring.integration.beans.TestBean4", Map.of("testBean2", "testBean2FromConfig")),
                 Arguments.of("com.bobocode.hoverla.bring.integration.beans.TestBean5", Map.of("action", "primaryThread")),
                 Arguments.of("com.bobocode.hoverla.bring.integration.beans.TestBean6", Map.of("action1", "nonPrimaryThread", "action2", "primaryThread")),
-                Arguments.of("com.bobocode.hoverla.bring.integration.beans.TestBean7", Map.of("action1", "nonPrimaryThread", "action2", "primaryThread"))
+                Arguments.of("com.bobocode.hoverla.bring.integration.beans.TestBean7", Map.of("action1", "nonPrimaryThread", "action2", "primaryThread")),
+                Arguments.of("testBean8FromConfig", Map.of("testBean1FromConfig", "testBean1FromConfig")),
+                Arguments.of("com.bobocode.hoverla.bring.integration.beans.TestBean10",
+                        Map.of("testBean6", "com.bobocode.hoverla.bring.integration.beans.TestBean6",
+                                "testBean8", "testBean8FromConfig",
+                                "testBean4", "com.bobocode.hoverla.bring.integration.beans.TestBean4",
+                                "testBean9", "testBean9FromConfig"))
         );
     }
 
@@ -70,6 +76,11 @@ class BringPositiveIntegrationTest {
         assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean3");
         assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean4");
         assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean5");
+        assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean6");
+        assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean7");
+        assertContainsBean("testBean8FromConfig");
+        assertContainsBean("testBean9FromConfig");
+        assertContainsBean("com.bobocode.hoverla.bring.integration.beans.TestBean10");
     }
 
     @ParameterizedTest

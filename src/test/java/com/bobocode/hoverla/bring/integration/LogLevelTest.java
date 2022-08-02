@@ -19,7 +19,7 @@ class LogLevelTest {
     @MethodSource("logLevelArgs")
     void setLogLevel(Level input, Level output) {
         getContextBuilder()
-                .packagesToScan("package")
+                .packagesToScan(this.getClass().getPackageName())
                 .logLevel(input)
                 .build();
 
