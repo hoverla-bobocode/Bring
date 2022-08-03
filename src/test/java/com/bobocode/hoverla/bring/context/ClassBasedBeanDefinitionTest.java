@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
 import static com.bobocode.hoverla.bring.support.BeanDefinitionAssert.assertThat;
@@ -159,9 +160,7 @@ class ClassBasedBeanDefinitionTest {
         Assertions.assertThatThrownBy(() -> beanDefinition.instantiate(firstDependency, secondDependency))
                 .isInstanceOf(BeanInstanceCreationException.class)
                 .hasMessageContaining("bean can't be instantiated")
-                .hasRootCauseInstanceOf(IllegalArgumentException.class)
-                .hasStackTraceContaining("wrong number of arguments");
-
+                .hasRootCauseInstanceOf(NoSuchElementException.class);
     }
 
     @Test

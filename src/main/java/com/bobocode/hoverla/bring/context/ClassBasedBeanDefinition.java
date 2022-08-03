@@ -5,15 +5,19 @@ import com.bobocode.hoverla.bring.annotation.Inject;
 import com.bobocode.hoverla.bring.annotation.Qualifier;
 import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
+import com.google.common.collect.Lists;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,7 +76,7 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
     @Override
     public void instantiate(BeanDefinition... dependencies) {
         if (!isInstantiated()) {
-            log.debug("Creating new instance of bean '{}'", name);
+            log.debug("Creating new instance of bean with name '{}'", name);
             instance = createInstance(dependencies);
         }
     }
@@ -149,9 +153,8 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
     }
 
     private Map<String, Class<?>> resolveFieldDependencies(Class<?> beanClass) {
-        this.injectionFields = Arrays.stream(beanClass.getDeclaredFields())
-                .filter(field -> field.isAnnotationPresent(Inject.class))
-                .toList();
+        List<Field> classFields = Lists.newArrayList(beanClass.getDeclaredFields());
+        this.injectionFields = getElementsAnnotatedWith(classFields, Inject.class);
 
         if (injectionFields.isEmpty()) {
             return emptyMap();
@@ -169,7 +172,7 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
     private Object createInstance(BeanDefinition... dependencies) {
         try {
             Objects.requireNonNull(dependencies);
-            log.debug("Initializing '{}' bean instance", name);
+            log.debug("Instantiating bean of name '{}' with {} dependencies", name, dependencies.length);
             this.instance = doCreateInstance(dependencies);
             log.debug("'{}' bean was instantiated", name);
             return instance;
@@ -180,36 +183,99 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
 
     @SneakyThrows
     private Object doCreateInstance(BeanDefinition... dependencies) {
-        Object beanInstance = createInstanceUsingConstructor(dependencies);
-        injectionFields.forEach(field -> injectFieldDependencies(beanInstance, field, dependencies));
+        List<BeanDefinition> dependencyList = Lists.newArrayList(dependencies);
+        Object beanInstance = createInstanceUsingConstructor(dependencyList);
+
+        doFieldInjection(beanInstance, dependencyList);
         return beanInstance;
     }
 
     @SneakyThrows
-    private Object createInstanceUsingConstructor(BeanDefinition... dependencies) {
+    private Object createInstanceUsingConstructor(List<BeanDefinition> dependencies) {
         if (constructor.getParameterCount() == 0) {
             return constructor.newInstance();
         }
-        Object[] dependenciesForConstructor = Arrays.stream(constructor.getParameters())
-                .map(parameter -> getMatchingDependency(parameter, dependencies))
-                .filter(Optional::isPresent)
-                .map(dependency -> dependency.get().getInstance())
-                .toArray();
+        List<Parameter> parameters = Lists.newArrayList(constructor.getParameters());
+        Object[] constructorArgs = new Object[parameters.size()];
 
-        return constructor.newInstance(dependenciesForConstructor);
+        resolveQualifiedParameters(dependencies, parameters, constructorArgs);
+        resolveNonQualifiedParameters(dependencies, parameters, constructorArgs);
+        return constructor.newInstance(constructorArgs);
     }
 
-    private Optional<BeanDefinition> getMatchingDependency(Parameter parameter, BeanDefinition[] dependencies) {
-        return Arrays.stream(dependencies)
-                .filter(dependency -> checkDependenciesMatch(parameter, parameter.getType(), dependency))
+    private void resolveQualifiedParameters(List<BeanDefinition> dependencies, List<Parameter> parameters,
+                                            Object[] constructorArgs) {
+        for (int i = 0; i < parameters.size(); i++) {
+            Parameter parameter = parameters.get(i);
+            if (parameter.isAnnotationPresent(Qualifier.class)) {
+                constructorArgs[i] = getMatchingDependency(parameter, dependencies).getInstance();
+            }
+        }
+    }
+
+    private void resolveNonQualifiedParameters(List<BeanDefinition> dependencies, List<Parameter> parameters,
+                                               Object[] constructorArgs) {
+        Map<Integer, Parameter> indexedParameters = new LinkedHashMap<>();
+        for (int i = 0; i < parameters.size(); i++) {
+            Parameter parameter = parameters.get(i);
+            if (!parameter.isAnnotationPresent(Qualifier.class)) {
+                indexedParameters.put(i, parameter);
+            }
+        }
+
+        indexedParameters.entrySet()
+                .stream()
+                .sorted(ClassBasedBeanDefinition::subclassesFirst)
+                .forEachOrdered(entry -> resolveArgumentFromEntry(entry, dependencies, constructorArgs));
+
+    }
+
+    private static int subclassesFirst(Map.Entry<Integer, Parameter> parameterEntry1,
+                                       Map.Entry<Integer, Parameter> parameterEntry2) {
+        Class<?> type1 = parameterEntry1.getValue().getType();
+        Class<?> type2 = parameterEntry2.getValue().getType();
+        if (type1.isAssignableFrom(type2)) {
+            return 1;
+        }
+        return -1;
+    }
+
+    private void resolveArgumentFromEntry(Map.Entry<Integer, Parameter> indexedParameter,
+                                          List<BeanDefinition> dependencies, Object[] constructorArgs) {
+        Integer index = indexedParameter.getKey();
+        Parameter parameter = indexedParameter.getValue();
+        Object matchingArgument = getMatchingDependency(parameter, dependencies).getInstance();
+        constructorArgs[index] = matchingArgument;
+    }
+
+    private BeanDefinition getMatchingDependency(Parameter parameter, List<BeanDefinition> dependencies) {
+        Optional<BeanDefinition> dependency = dependencies.stream()
+                .filter(d -> checkDependenciesMatch(parameter, parameter.getType(), d))
                 .findAny();
+        dependency.ifPresent(dependencies::remove); // remove mapped dependency to avoid conflicts
+
+        return dependency.orElseThrow();
     }
 
-    private void injectFieldDependencies(Object beanInstance, Field targetField, BeanDefinition... dependencies) {
-        Arrays.stream(dependencies)
+    private void doFieldInjection(Object beanInstance, List<BeanDefinition> dependencies) {
+        List<Field> qualifiedFields = getElementsAnnotatedWith(injectionFields, Qualifier.class);
+        qualifiedFields.forEach(field -> injectIntoField(beanInstance, field, dependencies));
+
+        // injection of fields without @Qualifier
+        ListUtils.removeAll(injectionFields, qualifiedFields)
+                .stream()
+                .sorted((f1, f2) -> f1.getType().isAssignableFrom(f2.getType()) ? 1 : -1) // superclasses last
+                .forEach(field -> injectIntoField(beanInstance, field, dependencies));
+    }
+
+    private void injectIntoField(Object beanInstance, Field targetField, List<BeanDefinition> dependencies) {
+        dependencies.stream()
                 .filter(dependency -> checkDependenciesMatch(targetField, targetField.getType(), dependency))
                 .findAny()
-                .ifPresent(dependency -> setFieldValue(targetField, beanInstance, dependency));
+                .ifPresent(dependency -> {
+                    setFieldValue(targetField, beanInstance, dependency);
+                    dependencies.remove(dependency);
+                });
     }
 
     private <T extends AnnotatedElement> boolean checkDependenciesMatch(T targetDependency, Class<?> targetType,
@@ -224,8 +290,14 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
             return qualifierValue.equals(sourceDependency.name());
         }
 
-        String targetTypeName = targetType.getName();
-        return targetTypeName.equals(sourceDependency.name());
+        return true;
+    }
+
+    private <T extends AnnotatedElement> List<T> getElementsAnnotatedWith(List<T> elements,
+                                                                          Class<? extends Annotation> annotation) {
+        return elements.stream()
+                .filter(e -> e.isAnnotationPresent(annotation))
+                .toList();
     }
 
     @SneakyThrows

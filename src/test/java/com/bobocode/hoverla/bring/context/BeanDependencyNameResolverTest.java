@@ -1,12 +1,11 @@
 package com.bobocode.hoverla.bring.context;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
 import org.assertj.core.util.Maps;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.emptyMap;
@@ -30,15 +29,12 @@ class BeanDependencyNameResolverTest {
         BeanDefinition dependency = prepareDefinition("int1", Integer.class, emptyMap());
         Map<String, Class<?>> dependencies = Maps.newHashMap(Integer.class.getName(), Integer.class);
         BeanDefinition dependent = prepareDefinition("bean", Object.class, dependencies);
-        Table<String, Class<?>, BeanDefinition> beanTable = HashBasedTable.create();
-        beanTable.put(dependency.name(), dependency.type(), dependency);
-        beanTable.put(dependent.name(), dependent.type(), dependent);
+        List<BeanDefinition> beans = List.of(dependency, dependent);
+        BeanDefinitionsContainer container = new BeanDefinitionsContainer(beans);
 
-        dependencyNameResolver.resolveDependencyNames(beanTable);
+        dependencyNameResolver.resolveDependencyNames(container);
 
-        Map<String, Class<?>> resolvedDependencies = dependent.dependencies();
-
-        assertThat(resolvedDependencies)
+        assertThat(dependent.dependencies())
                 .containsEntry(dependency.name(), dependency.type())
                 .doesNotContainEntry(Integer.class.getName(), Integer.class);
     }
@@ -52,16 +48,12 @@ class BeanDependencyNameResolverTest {
         Map<String, Class<?>> dependencies = Maps.newHashMap(Integer.class.getName(), Integer.class);
         BeanDefinition dependent = prepareDefinition("bean", Object.class, dependencies);
 
-        Table<String, Class<?>, BeanDefinition> beanTable = HashBasedTable.create();
-        beanTable.put(nonPrimaryDependency.name(), nonPrimaryDependency.type(), nonPrimaryDependency);
-        beanTable.put(primaryDependency.name(), primaryDependency.type(), primaryDependency);
-        beanTable.put(dependent.name(), dependent.type(), dependent);
+        List<BeanDefinition> beans = List.of(nonPrimaryDependency, primaryDependency, dependent);
+        BeanDefinitionsContainer container = new BeanDefinitionsContainer(beans);
 
-        dependencyNameResolver.resolveDependencyNames(beanTable);
+        dependencyNameResolver.resolveDependencyNames(container);
 
-        Map<String, Class<?>> resolvedDependencies = dependent.dependencies();
-
-        assertThat(resolvedDependencies)
+        assertThat(dependent.dependencies())
                 .containsEntry(primaryDependency.name(), primaryDependency.type())
                 .doesNotContainEntry(Integer.class.getName(), Integer.class)
                 .doesNotContainEntry(nonPrimaryDependency.name(), nonPrimaryDependency.type());
