@@ -5,14 +5,18 @@ import com.bobocode.hoverla.bring.annotation.Configuration;
 import com.bobocode.hoverla.bring.annotation.Qualifier;
 import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -127,7 +131,10 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
 
     private Object createInstance(BeanDefinition... dependencies) {
         try {
-            Object createdInstance = doCreateInstance(dependencies);
+            log.debug("Instantiating bean with name '{}'", name);
+            log.trace("Dependencies received are {}", Arrays.stream(dependencies)
+                    .collect(Collectors.toMap(BeanDefinition::name, BeanDefinition::type)));
+            Object createdInstance = doCreateInstance(Lists.newArrayList(dependencies));
             log.debug("'{}' bean was instantiated", name);
             return createdInstance;
         } catch (Exception e) {
@@ -135,22 +142,79 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
         }
     }
 
-    private Object doCreateInstance(BeanDefinition... dependencies) throws InvocationTargetException, IllegalAccessException {
-        Object[] args = Arrays.stream(beanMethod.getParameters())
-                .map(parameter -> getBeanDefinitionByParameter(parameter, dependencies))
-                .map(BeanDefinition::getInstance)
-                .toArray();
+    private Object doCreateInstance(List<BeanDefinition> dependencies) throws InvocationTargetException, IllegalAccessException {
+        Parameter[] parameters = beanMethod.getParameters();
+        Object[] constructorArguments = new Object[parameters.length];
 
-        return beanMethod.invoke(configInstance, args);
+        resolveQualifiedDependencies(dependencies, parameters, constructorArguments);
+        resolveUnqualifiedDependencies(dependencies, parameters, constructorArguments);
+        return beanMethod.invoke(configInstance, constructorArguments);
     }
 
-    private BeanDefinition getBeanDefinitionByParameter(Parameter parameter, BeanDefinition... dependencies) {
-        return Arrays.stream(dependencies)
+
+    private void resolveUnqualifiedDependencies(List<BeanDefinition> dependencies, Parameter[] parameters,
+                                                Object[] constructorArgs) {
+        Map<Integer, Parameter> nonQualifiedParams = new LinkedHashMap<>();
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            if (!parameter.isAnnotationPresent(Qualifier.class)) {
+                nonQualifiedParams.put(i, parameter);
+            }
+        }
+        nonQualifiedParams
+                .entrySet()
+                .stream()
+                .sorted(ConfigBasedBeanDefinition::subclassesFirst)
+                .forEachOrdered(entry -> resolveArgumentFromEntry(entry, dependencies, constructorArgs));
+
+    }
+
+    private void resolveQualifiedDependencies(List<BeanDefinition> dependencies, Parameter[] parameters,
+                                              Object[] constructorArgs) {
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            if (parameter.isAnnotationPresent(Qualifier.class)) {
+                constructorArgs[i] = getBeanDefinitionByParameter(parameter, dependencies).getInstance();
+            }
+        }
+    }
+
+    private static int subclassesFirst(Map.Entry<Integer, Parameter> parameterEntry1,
+                                       Map.Entry<Integer, Parameter> parameterEntry2) {
+        Class<?> type1 = parameterEntry1.getValue().getType();
+        Class<?> type2 = parameterEntry2.getValue().getType();
+        if (type1.isAssignableFrom(type2)) {
+            return 1;
+        }
+        return -1;
+    }
+
+    private void resolveArgumentFromEntry(Map.Entry<Integer, Parameter> indexedParameter,
+                                          List<BeanDefinition> dependencies, Object[] constructorArgs) {
+        Integer index = indexedParameter.getKey();
+        Parameter parameter = indexedParameter.getValue();
+        Object matchingArgument = getBeanDefinitionByParameter(parameter, dependencies).getInstance();
+        constructorArgs[index] = matchingArgument;
+    }
+
+    private BeanDefinition getBeanDefinitionByParameter(Parameter parameter, List<BeanDefinition> dependencies) {
+        BeanDefinition beanDefinition = dependencies.stream()
                 .filter(bd -> parameter.getType().isAssignableFrom(bd.type()))
-                .filter(bd -> bd.name().equals(resolveParameterName(parameter)))
+                .filter(bd -> checkNamesMatch(parameter, bd))
                 .findFirst()
                 .orElseThrow(() -> new BeanInstanceCreationException(
-                        "'%s' bean has no dependency that matches parameter `%s`".formatted(name, parameter.getName())));
+                        "'%s' bean has no dependency that matches parameter `%s`".formatted(name, parameter.getType().getName())));
+
+        dependencies.remove(beanDefinition); // remove mapped dependency to avoid conflicts
+        return beanDefinition;
+    }
+
+    private boolean checkNamesMatch(Parameter parameter, BeanDefinition bd) {
+        if (parameter.isAnnotationPresent(Qualifier.class)) {
+            String qualifierName = parameter.getAnnotation(Qualifier.class).value();
+            return bd.name().equals(qualifierName);
+        }
+        return true;
     }
 
     private String resolveParameterName(Parameter parameter) {

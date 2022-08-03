@@ -2,8 +2,6 @@ package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.NoSuchBeanException;
 import com.bobocode.hoverla.bring.exception.NoUniqueBeanException;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -25,7 +23,7 @@ public class ApplicationContextImpl implements ApplicationContext {
     private static final String NO_SUCH_BEAN_EXCEPTION_MESSAGE = "Bean with provided name/type [%s] not found in the context";
     private static final String NO_UNIQUE_BEAN_EXCEPTION_MESSAGE = "Expected single bean of type %s, but found %d";
 
-    private final Table<String, Class<?>, BeanDefinition> beanDefinitionTable;
+    private final BeanDefinitionsContainer container;
 
     /**
      * Scanners scan application packages to define {@link BeanDefinition} configs.
@@ -46,8 +44,8 @@ public class ApplicationContextImpl implements ApplicationContext {
 
         List<BeanDefinition> beanDefinitionList = runScanning(scanners);
         validator.validate(beanDefinitionList);
-        beanDefinitionTable = populateBeansDefinitionTable(beanDefinitionList);
-        initializer.initialize(beanDefinitionTable);
+        container = new BeanDefinitionsContainer(beanDefinitionList);
+        initializer.initialize(container);
 
         log.info("Application context initialized");
     }
@@ -57,16 +55,6 @@ public class ApplicationContextImpl implements ApplicationContext {
                 .map(BeanScanner::scan)
                 .flatMap(List::stream)
                 .toList();
-    }
-
-    private Table<String, Class<?>, BeanDefinition> populateBeansDefinitionTable(List<BeanDefinition> beanDefinitionList) {
-        log.debug("Store scanned bean definition in application context");
-        Table<String, Class<?>, BeanDefinition> table = HashBasedTable.create();
-        for (BeanDefinition beanDefinition : beanDefinitionList) {
-            log.debug("Bean definition with name = {} and type = {} will be added", beanDefinition.name(), beanDefinition.type());
-            table.put(beanDefinition.name(), beanDefinition.type(), beanDefinition);
-        }
-        return table;
     }
 
     @Override
@@ -84,8 +72,7 @@ public class ApplicationContextImpl implements ApplicationContext {
     }
 
     private <T> List<T> findBeanByType(Class<T> beanType) {
-        return beanDefinitionTable.column(beanType)
-                .values()
+        return container.getBeansAssignableFromType(beanType)
                 .stream()
                 .map(beanDefinition -> beanType.cast(beanDefinition.getInstance()))
                 .toList();
@@ -94,10 +81,7 @@ public class ApplicationContextImpl implements ApplicationContext {
     @Override
     public Object getBean(String beanName) {
         checkBeanName(beanName);
-        return beanDefinitionTable.row(beanName)
-                .values()
-                .stream()
-                .findFirst()
+        return container.getBeanDefinitionByName(beanName)
                 .map(BeanDefinition::getInstance)
                 .orElseThrow(() -> new NoSuchBeanException(NO_SUCH_BEAN_EXCEPTION_MESSAGE.formatted(beanName)));
     }
@@ -118,20 +102,20 @@ public class ApplicationContextImpl implements ApplicationContext {
     @Override
     public <T> Map<String, T> getAllBeans(Class<T> beanType) {
         checkNotNull(beanType, BEAN_TYPE_MUST_BE_NOT_NULL_MESSAGE);
-        return beanDefinitionTable.column(beanType)
-                .entrySet()
+        return container.getBeansAssignableFromType(beanType)
                 .stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> beanType.cast(entry.getValue().getInstance())));
+                .collect(Collectors.toMap(BeanDefinition::name, bean -> beanType.cast(bean.getInstance())));
     }
 
     @Override
     public boolean containsBean(String beanName) {
         checkBeanName(beanName);
-        return !beanDefinitionTable.row(beanName).isEmpty();
+        return container.getBeanDefinitionByName(beanName).isPresent();
     }
 
     private void checkBeanName(String beanName) {
         checkArgument(isNotEmpty(beanName), BEAN_NAME_MUST_BE_NOT_NULL_MESSAGE);
         checkArgument(containsNone(beanName, SPACE), BEAN_NAME_MUST_NOT_CONTAIN_SPACES);
     }
+
 }

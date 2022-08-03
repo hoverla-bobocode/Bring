@@ -38,4 +38,9 @@ public class InvalidMethodsTestBeanConfig {
     public String sameQualifiersMethod(@Qualifier("int") Integer integerOne, @Qualifier("int") Integer integerTwo) {
         return EMPTY;
     }
+
+    @Bean
+    public void voidMethod() {
+
+    }
 }

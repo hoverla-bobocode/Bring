@@ -1,7 +1,6 @@
 package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.exception.BeanValidationException;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -51,7 +51,7 @@ class BeanDefinitionValidatorTest {
     @DisplayName("Fails when bean definition list is null")
     void validationWhenListIsNull() {
         String expectedMessage = "Bean definition list is null";
-        Assertions.assertThatThrownBy(() -> beanDefinitionValidator.validate(null))
+        assertThatThrownBy(() -> beanDefinitionValidator.validate(null))
                 .isExactlyInstanceOf(NullPointerException.class)
                 .hasMessage(expectedMessage);
     }
@@ -61,11 +61,13 @@ class BeanDefinitionValidatorTest {
     @ValueSource(strings = {" ", "with space", "name\n", "tab\namenamer"})
     @DisplayName("Fails on name validation for bean when it's empty, blank or contains space, new line, carriage return or tab symbols")
     void beanNameIsIncorrect(String name) {
-        String expectedMessage = "Bean name for java.lang.String class is incorrect. It must not be empty, or contain carriage return, new line, space or tab symbols";
+        String expectedMessage = "Bean of type java.lang.String has invalid name";
         BeanDefinition beanDefinition = prepareDefinition(name, String.class);
         beanDefinitionList = List.of(beanDefinition);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertThatThrownBy(() -> beanDefinitionValidator.validate(beanDefinitionList))
+                .isInstanceOf(BeanValidationException.class)
+                .hasMessageContaining(expectedMessage);
     }
 
     @ParameterizedTest
@@ -73,12 +75,14 @@ class BeanDefinitionValidatorTest {
     @ValueSource(strings = {" ", "with space", "name\n", "tab\namenamer"})
     @DisplayName("Fails on dependency name validation when it's empty, blank or contains space, new line, carriage return or tab symbols")
     void dependencyNameIsIncorrect(String name) {
-        String expectedMessage = "Dependency name for java.lang.Integer class is incorrect. It must not be empty, or contain carriage return, new line, space or tab symbols";
+        String expectedMessage = "Bean `beanDef1` has dependency with invalid name";
         BeanDefinition beanDefinition = prepareDefinition(BD1, String.class);
         beanDefinition.dependencies().put(name, Integer.class);
         beanDefinitionList = List.of(beanDefinition);
 
-        assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
+        assertThatThrownBy(() -> beanDefinitionValidator.validate(beanDefinitionList))
+                .isInstanceOf(BeanValidationException.class)
+                .hasMessageContaining(expectedMessage);
     }
 
     @Test
@@ -183,14 +187,15 @@ class BeanDefinitionValidatorTest {
     }
 
     @Test
-    @DisplayName("Fails when checking dependencies and found more than 1 bean by type")
-    void checkingDependencyMoreThanOneDependencyByType() {
-        String expectedMessage = "Found more than 1 bean with type java.lang.Long in context";
+    @DisplayName("Fails when bean has a self-dependency: A -> A")
+    void checkingSelfDependency() {
+        String expectedMessage = """
+                Oops. Circular dependency occurs with bean: beanDef1 - java.lang.Long
+                beanDef1 depends on: [beanDef1]
+                beanDef1 depends on: [beanDef1]""";
         BeanDefinition beanDef1 = prepareDefinition(BD1, Long.class);
-        BeanDefinition beanDef2 = prepareDefinition(BD2, Integer.class);
-        beanDef1.dependencies().put(beanDef2.name(), Integer.class);
-        beanDef2.dependencies().put(Long.class.getName(), beanDef1.type());
-        beanDefinitionList = List.of(beanDef1, beanDef2);
+        beanDef1.dependencies().put(beanDef1.name(), beanDef1.type());
+        beanDefinitionList = List.of(beanDef1);
 
         assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
     }

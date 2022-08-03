@@ -6,8 +6,8 @@ import com.bobocode.hoverla.bring.test.subject.validation.config.EnumTestBeanCon
 import com.bobocode.hoverla.bring.test.subject.validation.config.InnerClassTestBeanConfig;
 import com.bobocode.hoverla.bring.test.subject.validation.config.InterfaceTestBeanConfig;
 import com.bobocode.hoverla.bring.test.subject.validation.config.InvalidMethodsTestBeanConfig;
-import com.bobocode.hoverla.bring.test.subject.validation.config.TestBeanConfigWithoutDefaultConstructor;
 import com.bobocode.hoverla.bring.test.subject.validation.config.RecordTestBeanConfig;
+import com.bobocode.hoverla.bring.test.subject.validation.config.TestBeanConfigWithoutDefaultConstructor;
 import com.bobocode.hoverla.bring.test.subject.validation.config.ValidTestBeanConfig;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.DisplayName;
@@ -65,6 +65,9 @@ class BeanConfigurationClassValidatorTest {
                 Arguments.of(
                         "protectedMethod method must be public",
                         "Doesn't allow method marked as @Bean to be protected"),
+                Arguments.of(
+                        "voidMethod method must return non-void object",
+                        "Doesn't allow method marked as @Bean to be void"),
                 Arguments.of(
                         "staticMethod method must not be static",
                         "Doesn't allow method marked as @Bean to be static"),

@@ -122,6 +122,9 @@ public class BeanConfigurationClassValidator {
         if (!Modifier.isPublic(modifiers)) {
             validationMessages.add("%s method must be public".formatted(method.getName()));
         }
+        if (method.getReturnType().equals(void.class)) {
+            validationMessages.add("%s method must return non-void object".formatted(method.getName()));
+        }
 
         validateMethodParameters(method.getParameters(), validationMessages);
     }
