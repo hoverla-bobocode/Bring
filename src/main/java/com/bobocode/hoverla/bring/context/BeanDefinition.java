@@ -30,11 +30,11 @@ public interface BeanDefinition {
     /**
      * Returns dependencies of current {@link BeanDefinition} that are required for its instantiation in a format of {@link Map}.
      * <p>Key in this map is a {@link String} object that represents name of dependent {@link BeanDefinition}.</p>
-     * <p>Value is this map is a {@link Class} object that represents type of dependent {@link BeanDefinition}.</p>
+     * <p>Value is this map is a {@link BeanDependency} object that encapsulates information about dependent {@link BeanDefinition}.</p>
      *
      * @return map of names and types of dependent {@link BeanDefinition}s.
      */
-    Map<String, Class<?>> dependencies();
+    Map<String, BeanDependency> dependencies();
 
     /**
      * Handy method to check whether a bean instance has already been created from current {@link BeanDefinition}.

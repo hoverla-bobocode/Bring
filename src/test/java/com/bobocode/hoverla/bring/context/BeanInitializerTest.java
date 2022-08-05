@@ -78,9 +78,9 @@ class BeanInitializerTest {
         doReturn(BeanDefinition.class).when(beanDefinition).type();
         when(beanDefinition.name()).thenReturn(beanDefinitionName);
 
-        Map<String, Class<?>> dependencies = new HashMap<>();
+        Map<String, BeanDependency> dependencies = new HashMap<>();
         for (var name : dependencyNames) {
-            dependencies.put(name, BeanDefinition.class);
+            dependencies.put(name, new BeanDependency(name, BeanDefinition.class, null, false));
         }
         when(beanDefinition.dependencies()).thenReturn(dependencies);
 

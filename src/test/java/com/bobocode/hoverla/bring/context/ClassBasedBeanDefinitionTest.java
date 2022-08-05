@@ -43,29 +43,43 @@ class ClassBasedBeanDefinitionTest {
     private Stream<Arguments> resolveDependenciesArgs() {
         return Stream.of(
                 Arguments.of(TestBean1.class,
-                        Map.of(String.class.getName(), String.class,
-                                Integer.class.getName(), Integer.class,
-                                Double.class.getName(), Double.class),
+                        Map.ofEntries(
+                                prepareDependency(String.class),
+                                prepareDependency(Integer.class),
+                                prepareDependency(Double.class)
+                        ),
                         "Plain constructor dependencies are resolved"
                 ),
                 Arguments.of(TestBean2.class,
-                        Map.of(TestBean1.class.getName(), TestBean1.class),
+                        Map.ofEntries(prepareDependency(TestBean1.class)),
                         "@Inject constructor dependencies are resolved"
                 ),
                 Arguments.of(TestBean3.class,
-                        Map.of(TestBean1.class.getName(), TestBean1.class,
-                                TestBean2.class.getName(), TestBean2.class),
+                        Map.ofEntries(
+                                prepareDependency(TestBean1.class),
+                                prepareDependency(TestBean2.class)
+                        ),
                         "@Inject constructor and field dependencies are resolved"
                 ),
                 Arguments.of(TestBean4.class,
-                        Map.of(TestBean2.class.getName(), TestBean2.class,
-                                TestBean3.class.getName(), TestBean3.class),
+                        Map.ofEntries(
+                                prepareDependency(TestBean2.class),
+                                prepareDependency(TestBean3.class)
+                        ),
                         "@Inject field dependencies are resolved"
                 ),
                 Arguments.of(TestBean5.class,
-                        Map.of("bean1", TestBean1.class,
-                                "bean4", TestBean4.class),
+                        Map.of("bean1", new BeanDependency("bean1", TestBean1.class, null, false),
+                                "bean4", new BeanDependency("bean4", TestBean4.class, null, false)
+                        ),
                         "Constructor and field dependencies are resolved with names from @Qualifier")
+        );
+    }
+
+    private Map.Entry<String, BeanDependency> prepareDependency(Class<?> beanClass) {
+        return Map.entry(
+                beanClass.getName(),
+                new BeanDependency(beanClass.getName(), beanClass, null, false)
         );
     }
 
@@ -81,7 +95,7 @@ class ClassBasedBeanDefinitionTest {
 
     @ParameterizedTest(name = "[{index}] - Resolve dependencies - {2}")
     @MethodSource("resolveDependenciesArgs")
-    void resolveDependenciesTest(Class<?> beanClass, Map<String, Class<?>> expectedDependencies, String description) {
+    void resolveDependenciesTest(Class<?> beanClass, Map<String, BeanDependency> expectedDependencies, String description) {
         var beanDefinition = new ClassBasedBeanDefinition(beanClass);
 
         assertThat(beanDefinition)
