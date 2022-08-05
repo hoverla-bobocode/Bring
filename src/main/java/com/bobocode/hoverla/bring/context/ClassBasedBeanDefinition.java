@@ -4,6 +4,7 @@ import com.bobocode.hoverla.bring.annotation.Bean;
 import com.bobocode.hoverla.bring.annotation.Inject;
 import com.bobocode.hoverla.bring.annotation.Qualifier;
 import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
+import com.bobocode.hoverla.bring.exception.BeanDependencyInjectionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.google.common.collect.Lists;
 import lombok.SneakyThrows;
@@ -39,8 +40,6 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
  */
 @Slf4j
 public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
-
-    private static final String INSTANTIATION_EXCEPTION_MESSAGE = "'%s' bean can't be instantiated";
 
     private Constructor<?> constructor;
 
@@ -81,6 +80,12 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
         }
     }
 
+    /**
+     * See {@link BeanDefinition#isPrimary()}.
+     *
+     * @return value of {@link Bean#primary()} property of {@link Bean @Bean} annotation
+     * on this {@link ClassBasedBeanDefinition#type} .
+     */
     @Override
     public boolean isPrimary() {
         return type.getAnnotation(Bean.class).primary();
@@ -174,10 +179,10 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
             Objects.requireNonNull(dependencies);
             log.debug("Instantiating bean of name '{}' with {} dependencies", name, dependencies.length);
             this.instance = doCreateInstance(dependencies);
-            log.debug("'{}' bean was instantiated", name);
+            log.debug("Bean with name '{}' was instantiated", name);
             return instance;
         } catch (Exception e) { // all @SneakyThrows stuff is caught here
-            throw new BeanInstanceCreationException(INSTANTIATION_EXCEPTION_MESSAGE.formatted(name), e);
+            throw new BeanInstanceCreationException("Bean with name '%s' can't be instantiated".formatted(name), e);
         }
     }
 
@@ -254,7 +259,9 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
                 .findAny();
         dependency.ifPresent(dependencies::remove); // remove mapped dependency to avoid conflicts
 
-        return dependency.orElseThrow();
+        return dependency
+                .orElseThrow(() -> new BeanDependencyInjectionException(
+                        "Unable to resolve injection of constructor parameter '%s'".formatted(parameter.getName())));
     }
 
     private void doFieldInjection(Object beanInstance, List<BeanDefinition> dependencies) {
@@ -266,6 +273,8 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
                 .stream()
                 .sorted((f1, f2) -> f1.getType().isAssignableFrom(f2.getType()) ? 1 : -1) // superclasses last
                 .forEach(field -> injectIntoField(beanInstance, field, dependencies));
+
+        verifyFieldInjection(beanInstance);
     }
 
     private void injectIntoField(Object beanInstance, Field targetField, List<BeanDefinition> dependencies) {
@@ -276,6 +285,19 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
                     setFieldValue(targetField, beanInstance, dependency);
                     dependencies.remove(dependency);
                 });
+    }
+
+    private void verifyFieldInjection(Object beanInstance) {
+        List<String> unresolvedFieldNames = injectionFields.stream()
+                .filter(field -> injectionFailedForField(field, beanInstance))
+                .map(Field::getName)
+                .toList();
+        if (!unresolvedFieldNames.isEmpty()) {
+            log.warn("Found {} unresolved bean instance fields after injection", unresolvedFieldNames.size());
+            throw new BeanDependencyInjectionException(
+                    "Field injection failed for bean instance of type %s. Unresolved fields: %s"
+                            .formatted(beanInstance.getClass().getName(), unresolvedFieldNames));
+        }
     }
 
     private <T extends AnnotatedElement> boolean checkDependenciesMatch(T targetDependency, Class<?> targetType,
@@ -305,5 +327,12 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
     private void setFieldValue(Field field, Object beanInstance, BeanDefinition dependency) {
         field.setAccessible(true);
         field.set(beanInstance, dependency.getInstance());
+    }
+
+    @SneakyThrows
+    @SuppressWarnings("java:S3011")
+    private boolean injectionFailedForField(Field targetField, Object beanInstance) {
+        targetField.setAccessible(true);
+        return Objects.isNull(targetField.get(beanInstance));
     }
 }

@@ -1,5 +1,6 @@
 package com.bobocode.hoverla.bring.context;
 
+import com.bobocode.hoverla.bring.exception.BeanDependencyInjectionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.bobocode.hoverla.bring.support.BeanDefinitionAssert;
 import com.bobocode.hoverla.bring.test.subject.bean.TestPrimaryBean;
@@ -89,7 +90,8 @@ class ConfigBasedBeanDefinitionTest {
 
         Assertions.assertThatThrownBy(beanDefinition::instantiate)
                 .isInstanceOf(BeanInstanceCreationException.class)
-                .hasMessageContaining("'beanWithDependencies' bean can't be instantiated")
+                .hasMessageContaining("Bean with name 'beanWithDependencies' can't be instantiated")
+                .hasRootCauseInstanceOf(BeanDependencyInjectionException.class)
                 .hasStackTraceContaining("bean has no dependency that matches parameter");
     }
 
