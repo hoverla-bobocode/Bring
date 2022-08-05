@@ -4,6 +4,7 @@ import com.bobocode.hoverla.bring.annotation.Bean;
 import com.bobocode.hoverla.bring.annotation.Configuration;
 import com.bobocode.hoverla.bring.annotation.Qualifier;
 import com.bobocode.hoverla.bring.exception.BeanDefinitionConstructionException;
+import com.bobocode.hoverla.bring.exception.BeanDependencyInjectionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -80,6 +80,12 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
         }
     }
 
+    /**
+     * See {@link BeanDefinition#isPrimary()}.
+     *
+     * @return value of {@link Bean#primary()} property of {@link Bean @Bean} annotation
+     * on this {@link ConfigBasedBeanDefinition#beanMethod}
+     */
     @Override
     public boolean isPrimary() {
         return beanMethod.getAnnotation(Bean.class).primary();
@@ -132,13 +138,16 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
     private Object createInstance(BeanDefinition... dependencies) {
         try {
             log.debug("Instantiating bean with name '{}'", name);
-            log.trace("Dependencies received are {}", Arrays.stream(dependencies)
-                    .collect(Collectors.toMap(BeanDefinition::name, BeanDefinition::type)));
+
+            Map<String, Class<?>> dependenciesMap = Arrays.stream(dependencies)
+                    .collect(toMap(BeanDefinition::name, BeanDefinition::type));
+            log.trace("Dependencies received are {}", dependenciesMap);
+
             Object createdInstance = doCreateInstance(Lists.newArrayList(dependencies));
-            log.debug("'{}' bean was instantiated", name);
+            log.debug("Bean with name '{}' was instantiated", name);
             return createdInstance;
         } catch (Exception e) {
-            throw new BeanInstanceCreationException("'%s' bean can't be instantiated".formatted(name), e);
+            throw new BeanInstanceCreationException("Bean with name '%s' can't be instantiated".formatted(name), e);
         }
     }
 
@@ -202,8 +211,8 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
                 .filter(bd -> parameter.getType().isAssignableFrom(bd.type()))
                 .filter(bd -> checkNamesMatch(parameter, bd))
                 .findFirst()
-                .orElseThrow(() -> new BeanInstanceCreationException(
-                        "'%s' bean has no dependency that matches parameter `%s`".formatted(name, parameter.getType().getName())));
+                .orElseThrow(() -> new BeanDependencyInjectionException(
+                        "'%s' bean has no dependency that matches parameter '%s'".formatted(name, parameter.getType().getName())));
 
         dependencies.remove(beanDefinition); // remove mapped dependency to avoid conflicts
         return beanDefinition;

@@ -1,5 +1,6 @@
 package com.bobocode.hoverla.bring.context;
 
+import com.bobocode.hoverla.bring.exception.BeanDependencyInjectionException;
 import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.bobocode.hoverla.bring.test.subject.bean.TestBeanWithInjectConstructor;
 import com.bobocode.hoverla.bring.test.subject.bean.TestBeanWithInjectFields;
@@ -21,10 +22,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
 import static com.bobocode.hoverla.bring.support.BeanDefinitionAssert.assertThat;
+import static java.lang.String.format;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -159,8 +160,9 @@ class ClassBasedBeanDefinitionTest {
 
         Assertions.assertThatThrownBy(() -> beanDefinition.instantiate(firstDependency, secondDependency))
                 .isInstanceOf(BeanInstanceCreationException.class)
-                .hasMessageContaining("bean can't be instantiated")
-                .hasRootCauseInstanceOf(NoSuchElementException.class);
+                .hasMessageMatching("Bean with name '\\S*' can't be instantiated")
+                .hasRootCauseInstanceOf(BeanDependencyInjectionException.class)
+                .hasStackTraceContaining("Unable to resolve injection of constructor parameter 'testBean1'");
     }
 
     @Test
@@ -190,6 +192,7 @@ class ClassBasedBeanDefinitionTest {
     @DisplayName("Instantiation of bean with 3 @Inject fields. Only 1 field matched and injected.")
     void createBeanWithNotMatchedFieldDependencies() {
         Class<?> beanClass = TestBeanWithInjectFields.class;
+        String beanClassName = TestBeanWithInjectFields.class.getName();
         var beanDefinition = new ClassBasedBeanDefinition(beanClass);
 
         // name not matched
@@ -199,14 +202,11 @@ class ClassBasedBeanDefinitionTest {
         // matched
         BeanDefinition thirdDependency = prepareDefinition(String.class, String.class.getName(), "strValue");
 
-        beanDefinition.instantiate(firstDependency, secondDependency, thirdDependency);
-        Object instance = beanDefinition.getInstance();
-
-        Assertions.assertThat(instance)
-                .isNotNull()
-                .isInstanceOf(beanClass)
-                .hasAllNullFieldsOrPropertiesExcept("aString")
-                .hasFieldOrPropertyWithValue("aString", "strValue");
+        Assertions.assertThatThrownBy(() -> beanDefinition.instantiate(firstDependency, secondDependency, thirdDependency))
+                .isInstanceOf(BeanInstanceCreationException.class)
+                .hasMessage(format("Bean with name '%s' can't be instantiated", beanClassName))
+                .hasRootCauseInstanceOf(BeanDependencyInjectionException.class)
+                .hasStackTraceContaining(format("Field injection failed for bean instance of type %s. Unresolved fields: [testBean, anInteger]", beanClassName));
     }
 
     @Test

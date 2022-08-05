@@ -1,13 +1,13 @@
 package com.bobocode.hoverla.bring.context;
 
 import com.bobocode.hoverla.bring.annotation.Bean;
-import com.bobocode.hoverla.bring.exception.BeanInitializationException;
+import com.bobocode.hoverla.bring.exception.BeanInitializePhaseException;
+import com.bobocode.hoverla.bring.exception.NoSuchBeanException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Collection;
-import java.util.Optional;
 
 /**
  * Class, responsible for triggering bean initialization.
@@ -28,7 +28,7 @@ public class BeanInitializer {
      * Triggers instantiation of all beans by passing their required dependencies.
      *
      * @param container {@link BeanDefinitionsContainer} with all {@link BeanDefinition} objects handled by current context.
-     * @throws BeanInitializationException in case an unexpected error occurs.
+     * @throws BeanInitializePhaseException in case an unexpected error occurs.
      */
     public void initialize(BeanDefinitionsContainer container) {
         log.debug("Bean initialization started");
@@ -38,7 +38,7 @@ public class BeanInitializer {
         try {
             beanDefinitions.forEach(beanDefinition -> doInitialize(beanDefinition, container));
         } catch (Exception ex) {
-            throw new BeanInitializationException("An error occurred during initialization phase", ex);
+            throw new BeanInitializePhaseException("An error occurred during initialization phase", ex);
         }
     }
 
@@ -70,8 +70,14 @@ public class BeanInitializer {
         return root.dependencies()
                 .keySet()
                 .stream()
-                .map(container::getBeanDefinitionByName)
-                .map(Optional::orElseThrow)
+                .map(dependencyName -> tryGetDependencyByName(dependencyName, root, container))
                 .toArray(BeanDefinition[]::new);
+    }
+
+    private BeanDefinition tryGetDependencyByName(String dependencyName, BeanDefinition root,
+                                                  BeanDefinitionsContainer container) {
+        return container.getBeanDefinitionByName(dependencyName)
+                .orElseThrow(() -> new NoSuchBeanException("Unable to resolve dependency '%s' of bean '%s"
+                        .formatted(dependencyName, root.name())));
     }
 }
