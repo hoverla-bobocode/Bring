@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -130,9 +131,10 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
      * @param beanMethod {@link Method} annotated with {@link Bean @Bean}
      * @return {@link Map} of names and types of dependent {@link BeanDefinition}s.
      */
-    private Map<String, Class<?>> resolveDependencies(Method beanMethod) {
+    private Map<String, BeanDependency> resolveDependencies(Method beanMethod) {
         return Arrays.stream(beanMethod.getParameters())
-                .collect(toMap(this::resolveParameterName, Parameter::getType));
+                .map(BeanDependency::fromParameter)
+                .collect(toMap(BeanDependency::getName, Function.identity()));
     }
 
     private Object createInstance(BeanDefinition... dependencies) {
@@ -224,12 +226,5 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
             return bd.name().equals(qualifierName);
         }
         return true;
-    }
-
-    private String resolveParameterName(Parameter parameter) {
-        if (parameter.isAnnotationPresent(Qualifier.class)) {
-            return parameter.getAnnotation(Qualifier.class).value();
-        }
-        return parameter.getType().getName();
     }
 }

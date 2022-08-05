@@ -47,7 +47,7 @@ public class BeanInitializer {
             return;
         }
         String beanName = definitionToInitialize.name();
-        log.trace("Initializing bean definition of name `{}`", beanName);
+        log.trace("Initializing bean definition with name `{}`", beanName);
 
         BeanDefinition[] beanDependencies = getBeanDependencies(definitionToInitialize, container);
         int numberOfDependencies = ArrayUtils.getLength(beanDependencies);

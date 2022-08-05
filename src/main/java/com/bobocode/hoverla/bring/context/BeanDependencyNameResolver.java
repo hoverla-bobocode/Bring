@@ -17,7 +17,7 @@ public class BeanDependencyNameResolver {
     public void resolveDependencyNames(BeanDefinitionsContainer container) {
         log.debug("Trying to resolve real dependency names for each bean definition before initialization");
         for (BeanDefinition beanDefinition : container.getBeanDefinitions()) {
-            Map<String, Class<?>> beanDependencies = beanDefinition.dependencies();
+            Map<String, BeanDependency> beanDependencies = beanDefinition.dependencies();
 
             if (beanDependencies.isEmpty()) {
                 continue;
@@ -25,13 +25,13 @@ public class BeanDependencyNameResolver {
             log.trace("Verifying names of {} dependencies of bean definition {} - {} ",
                     beanDependencies.size(), beanDefinition.name(), beanDefinition.type().getName());
 
-            List<Pair<String, String>> oldToNewNames = beanDependencies.entrySet()
+            List<Pair<String, String>> oldToNewNames = beanDependencies.values()
                     .stream()
-                    .map(entry -> resolveDependencyName(entry, beanDefinition, container))
+                    .map(dependency -> resolveDependencyName(dependency, beanDefinition, container))
                     .filter(Objects::nonNull)
                     .toList();
 
-            Map<String, Class<?>> oldDependencies = Map.copyOf(beanDependencies);
+            Map<String, BeanDependency> oldDependencies = Map.copyOf(beanDependencies);
 
             oldToNewNames.forEach(namePair -> replaceOldName(namePair, beanDependencies));
             if (oldDependencies.size() != beanDependencies.size()) { // something went wrong if dependency amount changed
@@ -40,24 +40,25 @@ public class BeanDependencyNameResolver {
         }
     }
 
-    private void replaceOldName(Pair<String, String> oldNameToNewName, Map<String, Class<?>> beanDependencies) {
+    private void replaceOldName(Pair<String, String> oldNameToNewName, Map<String, BeanDependency> beanDependencies) {
         String oldName = oldNameToNewName.getLeft();
         String newName = oldNameToNewName.getRight();
-        beanDependencies.put(newName, beanDependencies.remove(oldName));
+        BeanDependency oldDependency = beanDependencies.remove(oldName);
+        oldDependency.setName(newName);
+        beanDependencies.put(newName, oldDependency);
     }
 
     @Nullable
-    private Pair<String, String> resolveDependencyName(Map.Entry<String, Class<?>> targetDependency,
+    private Pair<String, String> resolveDependencyName(BeanDependency targetDependency,
                                                        BeanDefinition rootDefinition,
                                                        BeanDefinitionsContainer container) {
-        String dependencyName = targetDependency.getKey();
-        Class<?> dependencyType = targetDependency.getValue();
-
         // if true - dependency has no @Qualifier, thus name resolution is needed
-        if (!dependencyName.equals(dependencyType.getName())) {
+        if (targetDependency.isQualified()) {
             return null;
         }
 
+        String dependencyName = targetDependency.getName();
+        Class<?> dependencyType = targetDependency.getType();
         log.trace("Found dependency with unspecified name: {}. Trying to find matching bean definition by type: {} ",
                 dependencyName, dependencyType.getName());
 

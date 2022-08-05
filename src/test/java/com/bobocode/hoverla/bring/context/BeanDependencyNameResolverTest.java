@@ -26,26 +26,31 @@ class BeanDependencyNameResolverTest {
     @Test
     @DisplayName("Replaces default dependency names with their custom")
     void replacesDefaultNameToCustom() {
-        BeanDefinition dependency = prepareDefinition("int1", Integer.class, emptyMap());
-        Map<String, Class<?>> dependencies = Maps.newHashMap(Integer.class.getName(), Integer.class);
-        BeanDefinition dependent = prepareDefinition("bean", Object.class, dependencies);
-        List<BeanDefinition> beans = List.of(dependency, dependent);
+        BeanDefinition dependencyDefinition = prepareDefinition("int1", Integer.class, emptyMap());
+        BeanDependency dependency = new BeanDependency(Integer.class.getName(), Integer.class, null, false);
+        Map<String, BeanDependency> dependencies = Maps.newHashMap(Integer.class.getName(), dependency);
+        BeanDefinition dependentDefinition = prepareDefinition("bean", Object.class, dependencies);
+
+        List<BeanDefinition> beans = List.of(dependencyDefinition, dependentDefinition);
         BeanDefinitionsContainer container = new BeanDefinitionsContainer(beans);
 
         dependencyNameResolver.resolveDependencyNames(container);
 
-        assertThat(dependent.dependencies())
-                .containsEntry(dependency.name(), dependency.type())
-                .doesNotContainEntry(Integer.class.getName(), Integer.class);
+        assertThat(dependentDefinition.dependencies())
+                .containsEntry(dependency.getName(), dependency)
+                .doesNotContainKey(Integer.class.getName());
     }
 
     @Test
     @DisplayName("Replaces default dependency names with primary bean custom when there are more than 1 bean of the same type")
     void replacesDefaultNameToPrimaryBeanName() {
         BeanDefinition nonPrimaryDependency = prepareDefinition("int1", Integer.class, Map.of());
+
         BeanDefinition primaryDependency = prepareDefinition("int2", Integer.class, emptyMap());
         when(primaryDependency.isPrimary()).thenReturn(true);
-        Map<String, Class<?>> dependencies = Maps.newHashMap(Integer.class.getName(), Integer.class);
+
+        BeanDependency dependency = new BeanDependency(Integer.class.getName(), Integer.class, null, false);
+        Map<String, BeanDependency> dependencies = Maps.newHashMap(dependency.getName(), dependency);
         BeanDefinition dependent = prepareDefinition("bean", Object.class, dependencies);
 
         List<BeanDefinition> beans = List.of(nonPrimaryDependency, primaryDependency, dependent);
@@ -54,12 +59,11 @@ class BeanDependencyNameResolverTest {
         dependencyNameResolver.resolveDependencyNames(container);
 
         assertThat(dependent.dependencies())
-                .containsEntry(primaryDependency.name(), primaryDependency.type())
-                .doesNotContainEntry(Integer.class.getName(), Integer.class)
-                .doesNotContainEntry(nonPrimaryDependency.name(), nonPrimaryDependency.type());
+                .containsKey(primaryDependency.name())
+                .doesNotContainKeys(Integer.class.getName(), nonPrimaryDependency.name());
     }
 
-    private BeanDefinition prepareDefinition(String beanName, Class<?> type, Map<String, Class<?>> dependencyMap) {
+    private BeanDefinition prepareDefinition(String beanName, Class<?> type, Map<String, BeanDependency> dependencyMap) {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
         doReturn(type).when(beanDefinition).type();
         when(beanDefinition.name()).thenReturn(beanName);

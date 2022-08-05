@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import java.util.Set;
 
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.CR;
 import static org.apache.commons.lang3.StringUtils.LF;
 import static org.apache.commons.lang3.StringUtils.SPACE;
@@ -84,6 +86,8 @@ public class BeanDefinitionValidator {
             validateBeanName(beanDefinition);
             validateDependencies(beanDefinition, beanDefinitions);
         }
+
+        beanDefinitionCache.clear();
     }
 
     private void validateDuplicateNames(List<BeanDefinition> beanDefinitions) {
@@ -109,38 +113,43 @@ public class BeanDefinitionValidator {
         String beanDefName = currentBeanDefinition.name();
         log.trace("Checking dependencies for bean definition: {} - {}", beanDefName, currentBeanDefinition.type());
 
-        Map<String, Class<?>> currentDependencies = currentBeanDefinition.dependencies();
+        Collection<BeanDependency> currentDependencies = currentBeanDefinition.dependencies().values();
         if (currentDependencies.isEmpty()) {
             return;
         }
         log.trace("{} dependencies found", currentDependencies.size());
-        Set<String> dependencyNames = currentDependencies.keySet();
+
+        Set<String> dependencyNames = currentDependencies.stream()
+                .map(BeanDependency::getName)
+                .collect(toSet());
 
         Map<String, Set<String>> requiredDependencyNames = new LinkedHashMap<>();
         requiredDependencyNames.put(beanDefName, dependencyNames);
 
-        for (Map.Entry<String, Class<?>> dependencyEntry : currentDependencies.entrySet()) {
-            String dependencyName = dependencyEntry.getKey();
+        for (BeanDependency dependency : currentDependencies) {
+            String dependencyName = dependency.getName();
 
             validateDependencyName(dependencyName, currentBeanDefinition);
-            validateDependency(currentBeanDefinition, allDefinitions, requiredDependencyNames, dependencyEntry);
+            validateDependency(currentBeanDefinition, allDefinitions, requiredDependencyNames, dependency);
         }
     }
 
     private void validateDependency(BeanDefinition currentBeanDefinition,
                                     List<BeanDefinition> allDefinitions,
                                     Map<String, Set<String>> requiredDependencyNames,
-                                    Map.Entry<String, Class<?>> dependencyEntry) {
-        String dependencyName = dependencyEntry.getKey();
-        Class<?> dependencyType = dependencyEntry.getValue();
-        log.trace("Checking dependency: {} - {}", dependencyName, dependencyType.getName());
+                                    BeanDependency currentDependency) {
+        log.trace("Checking dependency: {} - {}", currentDependency.getName(), currentDependency.getType().getName());
 
-        BeanDefinition foundDependency = resolveDependency(dependencyName, dependencyType, allDefinitions);
+        BeanDefinition foundDependency = resolveDependency(currentBeanDefinition, currentDependency, allDefinitions);
         checkCircularDependency(currentBeanDefinition, foundDependency, allDefinitions, requiredDependencyNames);
     }
 
-    private BeanDefinition resolveDependency(String dependencyName, Class<?> dependencyType,
+    private BeanDefinition resolveDependency(BeanDefinition currentBeanDefinition,
+                                             BeanDependency currentDependency,
                                              List<BeanDefinition> allDefinitions) {
+        String dependencyName = currentDependency.getName();
+        Class<?> dependencyType = currentDependency.getType();
+
         BeanDefinition cachedDefinition = beanDefinitionCache.get(dependencyName, dependencyType);
         if (Objects.nonNull(cachedDefinition)) {
             return cachedDefinition;
@@ -152,14 +161,18 @@ public class BeanDefinitionValidator {
             foundDependency = definitionByName.get();
             checkTypeMatching(dependencyType, foundDependency);
         } else {
-            // Check whether @qualifier contains a non-existing bean name
-            if (!dependencyName.equals(dependencyType.getName())) {
+            // Check whether @Qualifier contains a non-existing bean name
+            if (currentDependency.isQualified()) {
                 throw new BeanValidationException(NOT_FOUND_BEANS.formatted(dependencyName, dependencyType.getName()));
             }
 
             log.warn("Was not able to find bean by name `{}` - trying to find by type: {}",
                     dependencyName, dependencyType.getName());
-            foundDependency = tryFindByType(dependencyType, allDefinitions, dependencyName);
+            foundDependency = tryFindByType(currentDependency, allDefinitions);
+
+            if (foundDependency.equals(currentBeanDefinition)) { // must be impossible, but if happens - need to avoid StackOverflow
+                throw new BeanValidationException("Unexpected state: single resolved dependency is equal to its root bean definition");
+            }
             log.trace("Found bean `{}` of class {}", foundDependency.name(), foundDependency.type().getName());
         }
 
@@ -171,11 +184,12 @@ public class BeanDefinitionValidator {
                                          BeanDefinition foundDependency,
                                          List<BeanDefinition> allDefinitions,
                                          Map<String, Set<String>> requiredDependencyNames) {
-        Map<String, Class<?>> innerDependencies = foundDependency.dependencies();
 
+        Map<String, BeanDependency> innerDependencies = foundDependency.dependencies();
         if (innerDependencies.isEmpty()) {
             return;
         }
+
         String rootBeanName = rootBean.name();
         String foundDependencyName = foundDependency.name();
 
@@ -183,8 +197,8 @@ public class BeanDefinitionValidator {
             throw validationException(foundDependency, requiredDependencyNames);
         });
 
-        for (Map.Entry<String, Class<?>> innerDependencyEntry : innerDependencies.entrySet()) {
-            String dependencyName = innerDependencyEntry.getKey();
+        for (BeanDependency innerDependency : innerDependencies.values()) {
+            String dependencyName = innerDependency.getName();
 
             validateDependencyName(dependencyName, foundDependency);
 
@@ -193,17 +207,16 @@ public class BeanDefinitionValidator {
             });
 
             requiredDependencyNames.put(foundDependencyName, innerDependencies.keySet());
-            checkInnerDependencies(rootBean, innerDependencyEntry, allDefinitions, requiredDependencyNames);
+
+            checkInnerDependencies(rootBean, innerDependency, allDefinitions, requiredDependencyNames);
         }
     }
 
-    private void checkInnerDependencies(BeanDefinition root, Map.Entry<String, Class<?>> innerDependencyEntry,
+    private void checkInnerDependencies(BeanDefinition root, BeanDependency innerDependency,
                                         List<BeanDefinition> allDefinitions,
                                         Map<String, Set<String>> requiredDependencyNames) {
-        String innerDependencyName = innerDependencyEntry.getKey();
-        Class<?> innerDependencyType = innerDependencyEntry.getValue();
-        BeanDefinition foundInnerDependency = resolveDependency(innerDependencyName, innerDependencyType, allDefinitions);
 
+        BeanDefinition foundInnerDependency = resolveDependency(root, innerDependency, allDefinitions);
         checkCircularDependency(root, foundInnerDependency, allDefinitions, requiredDependencyNames);
     }
 
@@ -250,14 +263,15 @@ public class BeanDefinitionValidator {
         }
     }
 
-    private BeanDefinition tryFindByType(Class<?> type, List<BeanDefinition> beanDefinitions, String name) {
+    private BeanDefinition tryFindByType(BeanDependency currentDependency, List<BeanDefinition> beanDefinitions) {
+        Class<?> type = currentDependency.getType();
         List<BeanDefinition> beansByType = findByType(type, beanDefinitions);
         if (beansByType.size() > 1) {
             log.debug("Found more than 1 candidate for bean dependency with type {}", type.getName());
             return tryFindPrimaryBean(type, beanDefinitions);
         }
         if (beansByType.isEmpty()) {
-            throw new BeanValidationException(NOT_FOUND_BEANS.formatted(name, type.getName()));
+            throw new BeanValidationException(NOT_FOUND_BEANS.formatted(currentDependency.getName(), type.getName()));
         }
         return beansByType.get(0);
     }

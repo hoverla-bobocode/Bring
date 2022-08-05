@@ -1,6 +1,7 @@
 package com.bobocode.hoverla.bring.support;
 
 import com.bobocode.hoverla.bring.context.BeanDefinition;
+import com.bobocode.hoverla.bring.context.BeanDependency;
 import org.assertj.core.api.AbstractObjectAssert;
 
 import java.util.Map;
@@ -38,7 +39,7 @@ public class BeanDefinitionAssert extends AbstractObjectAssert<BeanDefinitionAss
         return this;
     }
 
-    public BeanDefinitionAssert hasDependencies(Map<String, Class<?>> dependencies) {
+    public BeanDefinitionAssert hasDependencies(Map<String, BeanDependency> dependencies) {
         isNotNull();
 
         if (!Objects.equals(actual.dependencies(), dependencies)) {

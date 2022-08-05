@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toMap;
@@ -121,15 +122,15 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
      *
      * @return {@link Map} of names and types of dependent {@link BeanDefinition}s.
      */
-    private Map<String, Class<?>> resolveDependencies(Class<?> beanClass) {
-        Map<String, Class<?>> resolvedDependencies = new HashMap<>();
+    private Map<String, BeanDependency> resolveDependencies(Class<?> beanClass) {
+        Map<String, BeanDependency> resolvedDependencies = new HashMap<>();
         resolvedDependencies.putAll(resolveConstructorDependencies(beanClass));
         resolvedDependencies.putAll(resolveFieldDependencies(beanClass));
 
         return resolvedDependencies;
     }
 
-    private Map<String, Class<?>> resolveConstructorDependencies(Class<?> beanClass) {
+    private Map<String, BeanDependency> resolveConstructorDependencies(Class<?> beanClass) {
         Constructor<?>[] beanConstructors = beanClass.getConstructors();
 
         // we assume that at this point we should have only 1 @Inject constructor
@@ -146,7 +147,7 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
         return resolveConstructorDependencies(plainConstructor);
     }
 
-    private Map<String, Class<?>> resolveConstructorDependencies(Constructor<?> beanConstructor) {
+    private Map<String, BeanDependency> resolveConstructorDependencies(Constructor<?> beanConstructor) {
         this.constructor = beanConstructor;
 
         Parameter[] constructorParameters = constructor.getParameters();
@@ -154,10 +155,11 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
             return emptyMap();
         }
         return Arrays.stream(constructorParameters)
-                .collect(toMap(param -> resolveMemberName(param, param.getType()), Parameter::getType));
+                .map(BeanDependency::fromParameter)
+                .collect(toMap(BeanDependency::getName, Function.identity()));
     }
 
-    private Map<String, Class<?>> resolveFieldDependencies(Class<?> beanClass) {
+    private Map<String, BeanDependency> resolveFieldDependencies(Class<?> beanClass) {
         List<Field> classFields = Lists.newArrayList(beanClass.getDeclaredFields());
         this.injectionFields = getElementsAnnotatedWith(classFields, Inject.class);
 
@@ -165,13 +167,8 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
             return emptyMap();
         }
         return injectionFields.stream()
-                .collect(toMap(field -> resolveMemberName(field, field.getType()), Field::getType));
-    }
-
-    private <M extends AnnotatedElement> String resolveMemberName(M classMember, Class<?> memberType) {
-        return Optional.ofNullable(classMember.getAnnotation(Qualifier.class))
-                .map(Qualifier::value)
-                .orElse(memberType.getName());
+                .map(BeanDependency::fromField)
+                .collect(toMap(BeanDependency::getName, Function.identity()));
     }
 
     private Object createInstance(BeanDefinition... dependencies) {

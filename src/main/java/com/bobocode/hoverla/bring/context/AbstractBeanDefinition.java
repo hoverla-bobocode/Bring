@@ -19,7 +19,7 @@ public abstract class AbstractBeanDefinition implements BeanDefinition {
 
     protected Class<?> type;
 
-    protected Map<String, Class<?>> dependencies;
+    protected Map<String, BeanDependency> dependencies;
 
     /**
      * See {@link BeanDefinition#name()}.
@@ -41,7 +41,7 @@ public abstract class AbstractBeanDefinition implements BeanDefinition {
      * See {@link BeanDefinition#dependencies()}.
      */
     @Override
-    public Map<String, Class<?>> dependencies() {
+    public Map<String, BeanDependency> dependencies() {
         return dependencies;
     }
 
