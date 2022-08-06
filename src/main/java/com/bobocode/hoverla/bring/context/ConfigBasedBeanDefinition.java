@@ -9,10 +9,13 @@ import com.bobocode.hoverla.bring.exception.BeanInstanceCreationException;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +93,23 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
     @Override
     public boolean isPrimary() {
         return beanMethod.getAnnotation(Bean.class).primary();
+    }
+
+    /**
+     * @return {@code false} always since {@link ConfigBasedBeanDefinition} can never be a {@link Collection}
+     */
+    @Override
+    public boolean isCollection() {
+        return false;
+    }
+
+    /**
+     * @return {@code null} always since {@link ConfigBasedBeanDefinition} can never be a {@link Collection}
+     */
+    @Override
+    @Nullable
+    public Class<?> collectionGenericType() {
+        return null;
     }
 
     /**
@@ -210,8 +230,7 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
 
     private BeanDefinition getBeanDefinitionByParameter(Parameter parameter, List<BeanDefinition> dependencies) {
         BeanDefinition beanDefinition = dependencies.stream()
-                .filter(bd -> parameter.getType().isAssignableFrom(bd.type()))
-                .filter(bd -> checkNamesMatch(parameter, bd))
+                .filter(bd -> parameterMatch(parameter, bd))
                 .findFirst()
                 .orElseThrow(() -> new BeanDependencyInjectionException(
                         "'%s' bean has no dependency that matches parameter '%s'".formatted(name, parameter.getType().getName())));
@@ -220,11 +239,33 @@ public class ConfigBasedBeanDefinition extends AbstractBeanDefinition {
         return beanDefinition;
     }
 
-    private boolean checkNamesMatch(Parameter parameter, BeanDefinition bd) {
-        if (parameter.isAnnotationPresent(Qualifier.class)) {
-            String qualifierName = parameter.getAnnotation(Qualifier.class).value();
-            return bd.name().equals(qualifierName);
+    @SuppressWarnings("java:S2589")
+    private boolean parameterMatch(Parameter parameter, BeanDefinition dependencyToMatch) {
+        Class<?> parameterType = parameter.getType();
+        boolean typeMatch = parameterType.isAssignableFrom(dependencyToMatch.type());
+        if (!typeMatch) {
+            return false;
         }
+
+        Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
+        if (Objects.nonNull(qualifier)) {
+            return qualifier.value().equals(dependencyToMatch.name());
+        }
+
+        boolean parameterIsCollection = Collection.class.isAssignableFrom(parameterType);
+        boolean dependencyIsCollection = dependencyToMatch.isCollection();
+
+        if ((parameterIsCollection && !dependencyIsCollection) ||
+                (!parameterIsCollection && dependencyIsCollection)) {
+            return false;
+        }
+
+        if (dependencyIsCollection && parameterIsCollection) {
+            ParameterizedType parameterizedType = (ParameterizedType) parameter.getParameterizedType();
+            Class<?> actualCollectionType = (Class<?>) parameterizedType.getActualTypeArguments()[0];
+            return actualCollectionType.isAssignableFrom(dependencyToMatch.collectionGenericType());
+        }
+
         return true;
     }
 }

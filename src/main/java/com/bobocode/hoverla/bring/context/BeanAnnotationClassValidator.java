@@ -7,6 +7,7 @@ import com.bobocode.hoverla.bring.exception.BeanClassValidationException;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -14,7 +15,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -23,9 +29,12 @@ import java.util.function.Predicate;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.function.Function.*;
+import static java.util.stream.Collectors.*;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 
 /**
  * Validates classes annotated with {@link Bean @Bean} that were scanned by {@link BeanAnnotationScanner}.
@@ -98,15 +107,22 @@ public class BeanAnnotationClassValidator {
     }
 
     private void validateClass(Class<?> beanClass) {
+        String beanClassName = beanClass.getSimpleName();
         UNSUPPORTED_TYPE_PREDICATE_MAP.entrySet()
                 .stream()
                 .filter(predicateEntry -> predicateEntry.getValue().test(beanClass))
                 .findFirst()
                 .ifPresent(predicateEntry -> {
-                    log.error("Unsupported bean type found for class - {}", beanClass.getSimpleName());
+                    log.error("Unsupported bean type found for class - {}", beanClassName);
                     throw new BeanClassValidationException(
                             format("Class marked as @Bean is of unsupported type - %s", predicateEntry.getKey()));
                 });
+
+        TypeVariable<?>[] typeVariables = beanClass.getTypeParameters();
+        if (!isEmpty(typeVariables)) {
+            throw new BeanClassValidationException("Class %s marked as @Bean has typed parameters: %s"
+                    .formatted(beanClass, Arrays.toString(typeVariables)));
+        }
     }
 
     private void validateConstructors(Class<?> beanClass, List<String> validationViolations) {
@@ -142,6 +158,8 @@ public class BeanAnnotationClassValidator {
         if (beanConstructor.getParameterCount() == 0) {
             validationViolations.add("@Inject constructor has no parameters");
         } else {
+            validateGenericConstructor(beanConstructor);
+
             List<Parameter> constructorParameters = asList(beanConstructor.getParameters());
             validateConstructorParameters(constructorParameters, validationViolations);
         }
@@ -157,19 +175,39 @@ public class BeanAnnotationClassValidator {
 
         int parameterCount = beanConstructor.getParameterCount();
         if (parameterCount > 0) {
+            validateGenericConstructor(beanConstructor);
             List<Parameter> constructorParameters = asList(beanConstructor.getParameters());
             log.trace("Constructor has {} parameters - will be used for injection", parameterCount);
             validateConstructorParameters(constructorParameters, validationViolations);
         }
     }
 
+    private void validateGenericConstructor(Constructor<?> beanConstructor) {
+        TypeVariable<?>[] typeVariables = beanConstructor.getTypeParameters();
+        if (!isEmpty(typeVariables)) {
+            throw new BeanClassValidationException("Class has a constructor %s with typed parameters %s"
+                    .formatted(beanConstructor, Arrays.toString(typeVariables)));
+        }
+    }
+
     private void validateConstructorParameters(List<Parameter> constructorParameters, List<String> validationViolations) {
         log.trace("Validating constructor parameters");
+        constructorParameters.stream()
+                .filter(p -> Collection.class.isAssignableFrom(p.getType()))
+                .forEach(p -> validateGenericParameter(p, validationViolations));
+
         List<Parameter> qualifiedParameters = getElementsAnnotatedWith(constructorParameters, Qualifier.class);
         List<Parameter> nonQualifiedParameters = ListUtils.removeAll(constructorParameters, qualifiedParameters);
 
         validateQualifiedParameters(qualifiedParameters, validationViolations);
         validateNonQualifiedParameters(nonQualifiedParameters, validationViolations);
+    }
+
+    private void validateGenericParameter(Parameter collectionParameter, List<String> validationViolations) {
+        Type paramType = collectionParameter.getParameterizedType();
+        if (!(paramType instanceof ParameterizedType)) {
+            validationViolations.add("Parameter '%s' is a Collection of raw type".formatted(collectionParameter.getName()));
+        }
     }
 
     private void validateQualifiedParameters(List<Parameter> qualifiedParameters, List<String> validationViolations) {
@@ -185,7 +223,10 @@ public class BeanAnnotationClassValidator {
 
     private void validateNonQualifiedParameters(List<Parameter> nonQualifiedParameters,
                                                 List<String> validationViolations) {
+        validateCollectionParameters(nonQualifiedParameters, validationViolations);
+
         Map<Class<?>, List<String>> parametersWithSameType = nonQualifiedParameters.stream()
+                .filter(p -> !Collection.class.isAssignableFrom(p.getType()))
                 .collect(groupingBy(Parameter::getType, mapping(Parameter::getName, toList())));
 
         Maps.filterValues(parametersWithSameType, paramNames -> paramNames.size() > 1)
@@ -193,6 +234,27 @@ public class BeanAnnotationClassValidator {
                         format("Found several constructor parameters of type %s without @Qualifier - %s",
                                 type.getName(), fieldNames))
                 );
+    }
+
+    private void validateCollectionParameters(List<Parameter> nonQualifiedParameters,
+                                              List<String> validationViolations) {
+
+        boolean collectionDuplicatesPresent = nonQualifiedParameters.stream()
+                .filter(p -> Collection.class.isAssignableFrom(p.getType()))
+                .map(p -> Pair.of(p.getType(), resolveGenericType(p)))
+                .collect(groupingBy(identity(), counting()))
+                .values()
+                .stream()
+                .anyMatch(count -> count > 1);
+
+        if (collectionDuplicatesPresent) {
+            validationViolations.add("Found several constructor parameters of Collection subtype with same generic type");
+        }
+    }
+
+    private Class<?> resolveGenericType(Parameter parameter) {
+        ParameterizedType parameterizedType = (ParameterizedType) parameter.getParameterizedType();
+        return ((Class<?>) parameterizedType.getActualTypeArguments()[0]);
     }
 
     private void validateFields(Class<?> beanClass, List<String> validationViolations) {
@@ -226,6 +288,8 @@ public class BeanAnnotationClassValidator {
     }
 
     private void validateNonQualifiedFields(List<Field> nonQualifiedFields, List<String> validationViolations) {
+        validateCollectionFields(nonQualifiedFields, validationViolations);
+
         Map<Class<?>, List<String>> fieldsWithSameType = nonQualifiedFields.stream()
                 .collect(groupingBy(Field::getType, mapping(Field::getName, toList())));
 
@@ -233,6 +297,27 @@ public class BeanAnnotationClassValidator {
                 .forEach((type, fieldNames) -> validationViolations.add(
                         format("Found several fields of type %s without @Qualifier - %s", type.getName(), fieldNames))
                 );
+    }
+
+    private void validateCollectionFields(List<Field> nonQualifiedFields,
+                                          List<String> validationViolations) {
+
+        boolean collectionDuplicatesPresent = nonQualifiedFields.stream()
+                .filter(f -> Collection.class.isAssignableFrom(f.getType()))
+                .map(f -> Pair.of(f.getType(), resolveGenericType(f)))
+                .collect(groupingBy(identity(), counting()))
+                .values()
+                .stream()
+                .anyMatch(count -> count > 1);
+
+        if (collectionDuplicatesPresent) {
+            validationViolations.add("Found several instance fields of Collection subtype with same generic type");
+        }
+    }
+
+    private Class<?> resolveGenericType(Field field) {
+        ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+        return ((Class<?>) genericType.getActualTypeArguments()[0]);
     }
 
     private void validateFieldsModifiers(List<Field> fieldsForInjection, List<String> validationViolations) {

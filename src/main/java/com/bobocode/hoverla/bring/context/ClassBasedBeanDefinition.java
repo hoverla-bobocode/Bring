@@ -11,21 +11,24 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
 
+import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 
 import static java.util.Collections.emptyMap;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -93,6 +96,23 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
     }
 
     /**
+     * @return {@code false} always since {@link ClassBasedBeanDefinition} can never be a {@link Collection}
+     */
+    @Override
+    public boolean isCollection() {
+        return false;
+    }
+
+    /**
+     * @return {@code null} always since {@link ClassBasedBeanDefinition} can never be a {@link Collection}
+     */
+    @Override
+    @Nullable
+    public Class<?> collectionGenericType() {
+        return null;
+    }
+
+    /**
      * Resolves name of current {@link BeanDefinition}.
      *
      * <p>This name will be either equal to current bean {@link Class#getName()} or to
@@ -156,7 +176,7 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
         }
         return Arrays.stream(constructorParameters)
                 .map(BeanDependency::fromParameter)
-                .collect(toMap(BeanDependency::getName, Function.identity()));
+                .collect(toMap(BeanDependency::getName, identity()));
     }
 
     private Map<String, BeanDependency> resolveFieldDependencies(Class<?> beanClass) {
@@ -168,7 +188,7 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
         }
         return injectionFields.stream()
                 .map(BeanDependency::fromField)
-                .collect(toMap(BeanDependency::getName, Function.identity()));
+                .collect(toMap(BeanDependency::getName, identity()));
     }
 
     private Object createInstance(BeanDefinition... dependencies) {
@@ -210,7 +230,7 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
         for (int i = 0; i < parameters.size(); i++) {
             Parameter parameter = parameters.get(i);
             if (parameter.isAnnotationPresent(Qualifier.class)) {
-                constructorArgs[i] = getMatchingDependency(parameter, dependencies).getInstance();
+                constructorArgs[i] = getMatchingParameterDependency(parameter, dependencies).getInstance();
             }
         }
     }
@@ -246,19 +266,49 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
                                           List<BeanDefinition> dependencies, Object[] constructorArgs) {
         Integer index = indexedParameter.getKey();
         Parameter parameter = indexedParameter.getValue();
-        Object matchingArgument = getMatchingDependency(parameter, dependencies).getInstance();
+        Object matchingArgument = getMatchingParameterDependency(parameter, dependencies).getInstance();
         constructorArgs[index] = matchingArgument;
     }
 
-    private BeanDefinition getMatchingDependency(Parameter parameter, List<BeanDefinition> dependencies) {
+    private BeanDefinition getMatchingParameterDependency(Parameter parameter, List<BeanDefinition> dependencies) {
         Optional<BeanDefinition> dependency = dependencies.stream()
-                .filter(d -> checkDependenciesMatch(parameter, parameter.getType(), d))
+                .filter(bd -> parameterMatch(parameter, bd))
                 .findAny();
         dependency.ifPresent(dependencies::remove); // remove mapped dependency to avoid conflicts
 
         return dependency
                 .orElseThrow(() -> new BeanDependencyInjectionException(
                         "Unable to resolve injection of constructor parameter '%s'".formatted(parameter.getName())));
+    }
+
+    @SuppressWarnings("java:S2589")
+    private boolean parameterMatch(Parameter parameter, BeanDefinition dependencyToMatch) {
+        Class<?> parameterType = parameter.getType();
+        boolean typeMatch = parameterType.isAssignableFrom(dependencyToMatch.type());
+        if (!typeMatch) {
+            return false;
+        }
+
+        Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
+        if (Objects.nonNull(qualifier)) {
+            return qualifier.value().equals(dependencyToMatch.name());
+        }
+
+        boolean parameterIsCollection = Collection.class.isAssignableFrom(parameterType);
+        boolean dependencyIsCollection = dependencyToMatch.isCollection();
+
+        if ((parameterIsCollection && !dependencyIsCollection) ||
+                (!parameterIsCollection && dependencyIsCollection)) {
+            return false;
+        }
+
+        if (dependencyIsCollection && parameterIsCollection) {
+            ParameterizedType parameterizedType = (ParameterizedType) parameter.getParameterizedType();
+            Class<?> actualCollectionType = (Class<?>) parameterizedType.getActualTypeArguments()[0];
+            return actualCollectionType.isAssignableFrom(dependencyToMatch.collectionGenericType());
+        }
+
+        return true;
     }
 
     private void doFieldInjection(Object beanInstance, List<BeanDefinition> dependencies) {
@@ -276,12 +326,41 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
 
     private void injectIntoField(Object beanInstance, Field targetField, List<BeanDefinition> dependencies) {
         dependencies.stream()
-                .filter(dependency -> checkDependenciesMatch(targetField, targetField.getType(), dependency))
+                .filter(dependency -> fieldMatch(targetField, dependency))
                 .findAny()
                 .ifPresent(dependency -> {
                     setFieldValue(targetField, beanInstance, dependency);
                     dependencies.remove(dependency);
                 });
+    }
+
+    @SuppressWarnings("java:S2589")
+    private boolean fieldMatch(Field field, BeanDefinition dependencyToMatch) {
+        Class<?> fieldType = field.getType();
+        boolean typeMatch = fieldType.isAssignableFrom(dependencyToMatch.type());
+        if (!typeMatch) {
+            return false;
+        }
+
+        Qualifier qualifier = field.getAnnotation(Qualifier.class);
+        if (Objects.nonNull(qualifier)) {
+            return qualifier.value().equals(dependencyToMatch.name());
+        }
+
+        boolean fieldIsCollection = Collection.class.isAssignableFrom(fieldType);
+        boolean dependencyIsCollection = dependencyToMatch.isCollection();
+
+        if ((fieldIsCollection && !dependencyIsCollection) ||
+                (!fieldIsCollection && dependencyIsCollection)) {
+            return false;
+        }
+
+        if (dependencyIsCollection && fieldIsCollection) {
+            ParameterizedType parameterizedType = (ParameterizedType) field.getGenericType();
+            Class<?> actualCollectionType = (Class<?>) parameterizedType.getActualTypeArguments()[0];
+            return actualCollectionType.isAssignableFrom(dependencyToMatch.collectionGenericType());
+        }
+        return true;
     }
 
     private void verifyFieldInjection(Object beanInstance) {
@@ -290,26 +369,11 @@ public class ClassBasedBeanDefinition extends AbstractBeanDefinition {
                 .map(Field::getName)
                 .toList();
         if (!unresolvedFieldNames.isEmpty()) {
-            log.warn("Found {} unresolved bean instance fields after injection", unresolvedFieldNames.size());
+            log.warn("Found {} unresolved fields of bean instance after injection", unresolvedFieldNames.size());
             throw new BeanDependencyInjectionException(
                     "Field injection failed for bean instance of type %s. Unresolved fields: %s"
                             .formatted(beanInstance.getClass().getName(), unresolvedFieldNames));
         }
-    }
-
-    private <T extends AnnotatedElement> boolean checkDependenciesMatch(T targetDependency, Class<?> targetType,
-                                                                        BeanDefinition sourceDependency) {
-        boolean typesAssignable = targetType.isAssignableFrom(sourceDependency.type());
-        if (!typesAssignable) {
-            return false;
-        }
-
-        if (targetDependency.isAnnotationPresent(Qualifier.class)) {
-            String qualifierValue = targetDependency.getAnnotation(Qualifier.class).value();
-            return qualifierValue.equals(sourceDependency.name());
-        }
-
-        return true;
     }
 
     private <T extends AnnotatedElement> List<T> getElementsAnnotatedWith(List<T> elements,

@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -141,9 +142,12 @@ public class BeanDefinitionValidator {
         log.trace("Checking dependency: {} - {}", currentDependency.getName(), currentDependency.getType().getName());
 
         BeanDefinition foundDependency = resolveDependency(currentBeanDefinition, currentDependency, allDefinitions);
-        checkCircularDependency(currentBeanDefinition, foundDependency, allDefinitions, requiredDependencyNames);
+        if (Objects.nonNull(foundDependency)) {
+            checkCircularDependency(currentBeanDefinition, foundDependency, allDefinitions, requiredDependencyNames);
+        }
     }
 
+    @Nullable
     private BeanDefinition resolveDependency(BeanDefinition currentBeanDefinition,
                                              BeanDependency currentDependency,
                                              List<BeanDefinition> allDefinitions) {
@@ -166,8 +170,14 @@ public class BeanDefinitionValidator {
                 throw new BeanValidationException(NOT_FOUND_BEANS.formatted(dependencyName, dependencyType.getName()));
             }
 
+            if (currentDependency.isCollection()) {
+                validateCollectionDependency(allDefinitions, currentDependency);
+                return null;
+            }
+
             log.warn("Was not able to find bean by name `{}` - trying to find by type: {}",
                     dependencyName, dependencyType.getName());
+
             foundDependency = tryFindByType(currentDependency, allDefinitions);
 
             if (foundDependency.equals(currentBeanDefinition)) { // must be impossible, but if happens - need to avoid StackOverflow
@@ -178,6 +188,18 @@ public class BeanDefinitionValidator {
 
         beanDefinitionCache.put(dependencyName, dependencyType, foundDependency);
         return foundDependency;
+    }
+
+    private static void validateCollectionDependency(List<BeanDefinition> allDefinitions,
+                                                     BeanDependency collectionDependency) {
+        long beansOfGenericTypeCount = allDefinitions.stream()
+                .filter(b -> collectionDependency.getCollectionGenericType().isAssignableFrom(b.type()))
+                .count();
+        if (beansOfGenericTypeCount < 1) {
+            throw new BeanValidationException(
+                    "No bean candidates found to be injected in Collection dependency %s with generic type %s"
+                            .formatted(collectionDependency.getName(), collectionDependency.getCollectionGenericType().getName()));
+        }
     }
 
     private void checkCircularDependency(BeanDefinition rootBean,
@@ -217,7 +239,9 @@ public class BeanDefinitionValidator {
                                         Map<String, Set<String>> requiredDependencyNames) {
 
         BeanDefinition foundInnerDependency = resolveDependency(root, innerDependency, allDefinitions);
-        checkCircularDependency(root, foundInnerDependency, allDefinitions, requiredDependencyNames);
+        if (Objects.nonNull(foundInnerDependency)) {
+            checkCircularDependency(root, foundInnerDependency, allDefinitions, requiredDependencyNames);
+        }
     }
 
     private void validateDependencyName(String dependencyName, BeanDefinition rootDefinition) {
