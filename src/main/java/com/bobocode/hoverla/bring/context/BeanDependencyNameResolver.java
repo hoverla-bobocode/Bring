@@ -52,8 +52,8 @@ public class BeanDependencyNameResolver {
     private Pair<String, String> resolveDependencyName(BeanDependency targetDependency,
                                                        BeanDefinition rootDefinition,
                                                        BeanDefinitionsContainer container) {
-        // if true - dependency has no @Qualifier, thus name resolution is needed
-        if (targetDependency.isQualified()) {
+        // if true - dependency has no @Qualifier or is collection, thus name resolution is aborted
+        if (targetDependency.isQualified() || targetDependency.isCollection()) {
             return null;
         }
 
@@ -100,6 +100,7 @@ public class BeanDependencyNameResolver {
     private Optional<BeanDefinition> findMatchingDependency(List<BeanDefinition> dependencies) {
         if (dependencies.size() > 1) { // if more than 1 dependency - need to search for primary bean
             log.trace("Found more than 1 bean definitions by type. Will search for single primary bean");
+
             // we assume that at this point we should have only one primary bean
             // see BeanDefinitionValidator.java
             return dependencies.stream()

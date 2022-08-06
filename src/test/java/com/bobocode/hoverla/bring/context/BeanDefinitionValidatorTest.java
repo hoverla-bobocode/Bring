@@ -77,7 +77,7 @@ class BeanDefinitionValidatorTest {
     void dependencyNameIsIncorrect(String name) {
         String expectedMessage = "Bean `beanDef1` has dependency with invalid name";
         BeanDefinition beanDefinition = prepareDefinition(BD1, String.class);
-        BeanDependency beanDependency = new BeanDependency(name, Integer.class, null, false);
+        BeanDependency beanDependency = new BeanDependency(name, Integer.class, false);
         beanDefinition.dependencies().put(name, beanDependency);
         beanDefinitionList = List.of(beanDefinition);
 
@@ -228,7 +228,7 @@ class BeanDefinitionValidatorTest {
 
         beanDef1.dependencies().put(beanDef2.name(), prepareDependency(beanDef2));
         beanDef2.dependencies().put(beanDef3.name(), prepareDependency(beanDef3));
-        beanDef3.dependencies().put(dependencyName, new BeanDependency(dependencyName, Integer.class, null, false));
+        beanDef3.dependencies().put(dependencyName, new BeanDependency(dependencyName, Integer.class, false));
         beanDefinitionList = List.of(beanDef1, beanDef2, beanDef3);
 
         assertExceptionAndMessage(
@@ -243,7 +243,7 @@ class BeanDefinitionValidatorTest {
         String dependencyName = Integer.class.getName();
         BeanDefinition beanDef1 = prepareDefinition("beanDef1", Integer.class);
         BeanDefinition beanDef2 = prepareDefinition(BD2, Integer.class);
-        beanDef1.dependencies().put(dependencyName, new BeanDependency(dependencyName, Integer.class, null, false));
+        beanDef1.dependencies().put(dependencyName, new BeanDependency(dependencyName, Integer.class, false));
         beanDefinitionList = List.of(beanDef1, beanDef2);
 
         assertExceptionAndMessage(expectedMessage, () -> beanDefinitionValidator.validate(beanDefinitionList));
@@ -254,7 +254,7 @@ class BeanDefinitionValidatorTest {
     void dependenciesNotFoundByCustomName() {
         String expectedMessageTemplate = "Unable to find bean with name `%s` and type %s in context";
         BeanDefinition beanDef1 = prepareDefinition("beanDef1", Integer.class);
-        BeanDependency anotherNameBean = new BeanDependency("anotherName", Integer.class, null, true);
+        BeanDependency anotherNameBean = new BeanDependency("anotherName", Integer.class, true);
         beanDef1.dependencies().put("anotherName", anotherNameBean);
         beanDefinitionList = List.of(beanDef1);
 
@@ -269,7 +269,7 @@ class BeanDefinitionValidatorTest {
         Class<Integer> type = Integer.class;
         BeanDefinition primaryBean = prepareDefinition("primaryBean", type);
         BeanDefinition nonPrimaryBean = prepareDefinition("nonPrimaryBean", type);
-        bean.dependencies().put(type.getName(), new BeanDependency(type.getName(), type, null, false));
+        bean.dependencies().put(type.getName(), new BeanDependency(type.getName(), type, false));
         when(primaryBean.isPrimary()).thenReturn(true);
 
         beanDefinitionList = List.of(bean, primaryBean, nonPrimaryBean);
@@ -284,7 +284,7 @@ class BeanDefinitionValidatorTest {
         Class<Integer> type = Integer.class;
         BeanDefinition primaryBean1 = prepareDefinition("primaryBean", type);
         BeanDefinition primaryBean2 = prepareDefinition("nonPrimaryBean", type);
-        bean.dependencies().put(type.getName(), new BeanDependency(type.getName(), type, null, false));
+        bean.dependencies().put(type.getName(), new BeanDependency(type.getName(), type, false));
         when(primaryBean1.isPrimary()).thenReturn(true);
         when(primaryBean2.isPrimary()).thenReturn(true);
 
@@ -307,7 +307,7 @@ class BeanDefinitionValidatorTest {
 
         Map<String, BeanDependency> dependencies = new HashMap<>();
         for (var dependency : beanDefinitions) {
-            dependencies.put(dependency.name(), new BeanDependency(dependency.name(), dependency.type(), null, false));
+            dependencies.put(dependency.name(), new BeanDependency(dependency.name(), dependency.type(), false));
         }
         when(beanDefinition.dependencies()).thenReturn(dependencies);
 
@@ -316,6 +316,6 @@ class BeanDefinitionValidatorTest {
 
     private BeanDependency prepareDependency(BeanDefinition beanDefinition) {
         boolean qualified = beanDefinition.name().equals(beanDefinition.type().getName());
-        return new BeanDependency(beanDefinition.name(), beanDefinition.type(), null, qualified);
+        return new BeanDependency(beanDefinition.name(), beanDefinition.type(), qualified);
     }
 }

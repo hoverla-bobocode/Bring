@@ -72,8 +72,8 @@ class ConfigBasedBeanDefinitionTest {
         when(firstDependency.getInstance()).thenReturn(1);
         BeanDefinition secondDependency = mock(BeanDefinition.class);
         when(secondDependency.getInstance()).thenReturn("string");
-        BeanDependency beanDependencyInt = new BeanDependency(int.class.getName(), Integer.class, null, false);
-        BeanDependency beanDependencyString = new BeanDependency("testParamName", Integer.class, null, true);
+        BeanDependency beanDependencyInt = new BeanDependency(int.class.getName(), Integer.class, false);
+        BeanDependency beanDependencyString = new BeanDependency("testParamName", Integer.class, true);
         var dependencies = Map.of(beanDependencyInt.getName(), beanDependencyInt, beanDependencyString.getName(), beanDependencyString);
 
         BeanDefinition beanDefinition = new ConfigBasedBeanDefinition(testBeanConfig, method);

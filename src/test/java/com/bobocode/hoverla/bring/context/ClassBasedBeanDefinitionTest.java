@@ -69,8 +69,8 @@ class ClassBasedBeanDefinitionTest {
                         "@Inject field dependencies are resolved"
                 ),
                 Arguments.of(TestBean5.class,
-                        Map.of("bean1", new BeanDependency("bean1", TestBean1.class, null, false),
-                                "bean4", new BeanDependency("bean4", TestBean4.class, null, false)
+                        Map.of("bean1", new BeanDependency("bean1", TestBean1.class, false),
+                                "bean4", new BeanDependency("bean4", TestBean4.class, false)
                         ),
                         "Constructor and field dependencies are resolved with names from @Qualifier")
         );
@@ -79,7 +79,7 @@ class ClassBasedBeanDefinitionTest {
     private Map.Entry<String, BeanDependency> prepareDependency(Class<?> beanClass) {
         return Map.entry(
                 beanClass.getName(),
-                new BeanDependency(beanClass.getName(), beanClass, null, false)
+                new BeanDependency(beanClass.getName(), beanClass, false)
         );
     }
 

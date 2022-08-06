@@ -7,20 +7,28 @@ import com.bobocode.hoverla.bring.exception.BeanConfigValidationException;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 
 /**
  * Validates classes annotated with {@link Configuration @Configuration} and
@@ -67,16 +75,16 @@ public class BeanConfigurationClassValidator {
         throw new BeanConfigValidationException(message);
     }
 
-    private void validateMethods(Method[] methods, List<String> validationMessages) {
-        Arrays.stream(methods)
-                .filter(m -> m.isAnnotationPresent(Bean.class))
-                .forEach(m -> validateBeanMethod(m, validationMessages));
-    }
-
     private void validateConfigClass(Class<?> configClass, List<String> validationMessages) {
         validateType(configClass, validationMessages);
         validateModifiers(configClass, validationMessages);
         verifyDefaultConstructorExists(configClass, validationMessages);
+    }
+
+    private void validateMethods(Method[] methods, List<String> validationMessages) {
+        Arrays.stream(methods)
+                .filter(m -> m.isAnnotationPresent(Bean.class))
+                .forEach(m -> validateBeanMethod(m, validationMessages));
     }
 
     private void validateType(Class<?> configClass, List<String> messages) {
@@ -91,6 +99,12 @@ public class BeanConfigurationClassValidator {
         }
         if (configClass.isInterface()) {
             messages.add("Configuration class must not be an interface");
+        }
+
+        TypeVariable<?>[] typeVariables = configClass.getTypeParameters();
+        if (!isEmpty(typeVariables)) {
+            messages.add("Configuration class must not have typed parameters: %s"
+                    .formatted(Arrays.toString(typeVariables)));
         }
     }
 
@@ -126,10 +140,26 @@ public class BeanConfigurationClassValidator {
             validationMessages.add("%s method must return non-void object".formatted(method.getName()));
         }
 
+        validateGenericBeanMethod(method, validationMessages);
         validateMethodParameters(method.getParameters(), validationMessages);
     }
 
+    private void validateGenericBeanMethod(Method method, List<String> validationMessages) {
+        TypeVariable<Method>[] typeParameters = method.getTypeParameters();
+        if (!isEmpty(typeParameters)) {
+            validationMessages.add("%s method must not have typed parameters: %s"
+                    .formatted(method.getName(), Arrays.toString(typeParameters)));
+        }
+
+        Type returnType = method.getGenericReturnType();
+        if (returnType instanceof TypeVariable<?> tv) {
+            validationMessages.add("%s method must not have typed return type: %s".formatted(method.getName(), tv));
+        }
+    }
+
     private void validateMethodParameters(Parameter[] methodParameters, List<String> validationMessages) {
+        validateGenericParameters(methodParameters, validationMessages);
+
         Parameter[] qualifiedParameters = Arrays.stream(methodParameters)
                 .filter(p -> p.isAnnotationPresent(Qualifier.class))
                 .toArray(Parameter[]::new);
@@ -138,6 +168,20 @@ public class BeanConfigurationClassValidator {
 
         validateQualifiedParameters(qualifiedParameters, validationMessages);
         validateNonQualifiedParameters(nonQualifiedParameters, validationMessages);
+    }
+
+    private void validateGenericParameters(Parameter[] methodParameters, List<String> validationMessages) {
+        List<Parameter> collectionTypedParameters = Arrays.stream(methodParameters)
+                .filter(p -> Collection.class.isAssignableFrom(p.getType()))
+                .toList();
+
+        for (Parameter collectionParameter : collectionTypedParameters) {
+            Type paramType = collectionParameter.getParameterizedType();
+            if (!(paramType instanceof ParameterizedType)) {
+                validationMessages.add("Parameter '%s' is a Collection of raw type".formatted(collectionParameter.getName()));
+            }
+        }
+
     }
 
     private void validateQualifiedParameters(Parameter[] qualifiedParameters, List<String> validationMessages) {
@@ -153,7 +197,11 @@ public class BeanConfigurationClassValidator {
 
     private void validateNonQualifiedParameters(Parameter[] nonQualifiedParameters,
                                                 List<String> validationViolations) {
+
+        validateCollectionDuplicates(nonQualifiedParameters, validationViolations);
+
         Map<Class<?>, List<String>> parametersWithSameType = Arrays.stream(nonQualifiedParameters)
+                .filter(p -> !Collection.class.isAssignableFrom(p.getType()))
                 .collect(groupingBy(Parameter::getType, mapping(Parameter::getName, toList())));
 
         Maps.filterValues(parametersWithSameType, paramNames -> paramNames.size() > 1)
@@ -161,5 +209,26 @@ public class BeanConfigurationClassValidator {
                         format("Found several method parameters of type %s without @Qualifier - %s",
                                 type.getName(), paramNames)
                 ));
+    }
+
+    private void validateCollectionDuplicates(Parameter[] nonQualifiedParameters,
+                                              List<String> validationViolations) {
+
+        boolean collectionDuplicatesPresent = Arrays.stream(nonQualifiedParameters)
+                .filter(p -> Collection.class.isAssignableFrom(p.getType()))
+                .map(p -> Pair.of(p.getType(), resolveGenericType(p)))
+                .collect(groupingBy(Function.identity(), counting()))
+                .values()
+                .stream()
+                .anyMatch(count -> count > 1);
+
+        if (collectionDuplicatesPresent) {
+            validationViolations.add("Found several constructor parameters of Collection subtype with same generic type");
+        }
+    }
+
+    private Class<?> resolveGenericType(Parameter parameter) {
+        ParameterizedType parameterizedType = (ParameterizedType) parameter.getParameterizedType();
+        return ((Class<?>) parameterizedType.getActualTypeArguments()[0]);
     }
 }

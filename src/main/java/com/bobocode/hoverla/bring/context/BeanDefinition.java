@@ -68,4 +68,8 @@ public interface BeanDefinition {
      * @return {@code true} if bean is primary, {@code false} otherwise.
      */
     boolean isPrimary();
+
+    boolean isCollection();
+
+    Class<?> collectionGenericType();
 }

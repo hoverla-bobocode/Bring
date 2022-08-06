@@ -27,7 +27,7 @@ class BeanDependencyNameResolverTest {
     @DisplayName("Replaces default dependency names with their custom")
     void replacesDefaultNameToCustom() {
         BeanDefinition dependencyDefinition = prepareDefinition("int1", Integer.class, emptyMap());
-        BeanDependency dependency = new BeanDependency(Integer.class.getName(), Integer.class, null, false);
+        BeanDependency dependency = new BeanDependency(Integer.class.getName(), Integer.class, false);
         Map<String, BeanDependency> dependencies = Maps.newHashMap(Integer.class.getName(), dependency);
         BeanDefinition dependentDefinition = prepareDefinition("bean", Object.class, dependencies);
 
@@ -49,7 +49,7 @@ class BeanDependencyNameResolverTest {
         BeanDefinition primaryDependency = prepareDefinition("int2", Integer.class, emptyMap());
         when(primaryDependency.isPrimary()).thenReturn(true);
 
-        BeanDependency dependency = new BeanDependency(Integer.class.getName(), Integer.class, null, false);
+        BeanDependency dependency = new BeanDependency(Integer.class.getName(), Integer.class, false);
         Map<String, BeanDependency> dependencies = Maps.newHashMap(dependency.getName(), dependency);
         BeanDefinition dependent = prepareDefinition("bean", Object.class, dependencies);
 

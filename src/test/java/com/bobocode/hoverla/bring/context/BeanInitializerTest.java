@@ -80,7 +80,7 @@ class BeanInitializerTest {
 
         Map<String, BeanDependency> dependencies = new HashMap<>();
         for (var name : dependencyNames) {
-            dependencies.put(name, new BeanDependency(name, BeanDefinition.class, null, false));
+            dependencies.put(name, new BeanDependency(name, BeanDefinition.class, false));
         }
         when(beanDefinition.dependencies()).thenReturn(dependencies);
 

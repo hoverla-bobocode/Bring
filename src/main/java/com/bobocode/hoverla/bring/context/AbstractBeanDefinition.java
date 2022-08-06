@@ -66,4 +66,8 @@ public abstract class AbstractBeanDefinition implements BeanDefinition {
         return Objects.requireNonNull(instance, "Instance of %s has not been created yet".formatted(name));
     }
 
+    @Override
+    public boolean isPrimary() {
+        return false;
+    }
 }

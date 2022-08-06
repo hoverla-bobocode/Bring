@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Class, responsible for triggering bean initialization.
@@ -46,6 +47,7 @@ public class BeanInitializer {
         if (definitionToInitialize.isInstantiated()) {
             return;
         }
+
         String beanName = definitionToInitialize.name();
         log.trace("Initializing bean definition with name `{}`", beanName);
 
@@ -68,10 +70,33 @@ public class BeanInitializer {
 
     private BeanDefinition[] getBeanDependencies(BeanDefinition root, BeanDefinitionsContainer container) {
         return root.dependencies()
-                .keySet()
+                .values()
                 .stream()
-                .map(dependencyName -> tryGetDependencyByName(dependencyName, root, container))
+                .map(dependency -> tryGetDependency(dependency, root, container))
                 .toArray(BeanDefinition[]::new);
+    }
+
+    private BeanDefinition tryGetDependency(BeanDependency dependency,
+                                            BeanDefinition root,
+                                            BeanDefinitionsContainer container) {
+
+        if (!dependency.isQualified() && dependency.isCollection()) {
+            return getCollectionDependency(dependency, container);
+        }
+        return tryGetDependencyByName(dependency.getName(), root, container);
+    }
+
+    private BeanDefinition getCollectionDependency(BeanDependency dependency, BeanDefinitionsContainer container) {
+        List<String> dependenciesNames = container.getBeansAssignableFromType(dependency.getCollectionGenericType())
+                .stream()
+                .map(BeanDefinition::name)
+                .toList();
+
+        return new CollectionBeanDefinition(
+                dependency.getType(),
+                dependency.getCollectionGenericType(),
+                dependenciesNames
+        );
     }
 
     private BeanDefinition tryGetDependencyByName(String dependencyName, BeanDefinition root,
